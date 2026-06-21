@@ -1,0 +1,31 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+
+# Generated outputs
+output_pattern.json
+sample_catalog.json
+build_guide.txt
+output_midi/
+output_preview.wav
+
+# User samples (keep folder structure, ignore audio files)
+PLG_Sounds/**/*.wav
+PLG_Sounds/**/*.mp3
+PLG_Sounds/**/*.ogg
+PLG_Sounds/**/*.flac
+PLG_Sounds/**/*.aif
+PLG_Sounds/**/*.aiff
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
