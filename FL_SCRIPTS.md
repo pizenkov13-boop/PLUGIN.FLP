@@ -29,23 +29,29 @@ all notes (where it makes sense). Select notes first for surgical edits.
 
 ## The scripts
 
-### 1. PLG Hat Roll
+### 1. PLG Hat Roll (v2)
 Chops each note into evenly spaced rolls — the bread-and-butter trap hat roll.
-- **Division** — 1/4, 1/8, 1/16, 1/32, 1/8 triplet, 1/16 triplet.
+- **Division** — 1/4, 1/8, 1/16, 1/32, 1/8 triplet, 1/16 triplet, **1/24 triplet**.
 - **Velocity ramp** — negative fades the roll out, positive builds it up, 0 = flat.
+- **Velocity humanize** — random per-hit velocity variation so the roll breathes.
+- **Timing humanize** — micro-shifts each hit off the grid (first hit stays put) for a loose, not-robotic feel.
 - **Only selected notes** — on by default.
 
 ### 2. PLG Pan Spread
-Spreads notes across the stereo field (great on hats/perc to widen a beat).
+Spreads notes across the stereo field (built for hats/perc to widen a beat).
 - **Mode** — Alternate L/R, Ramp L→R, Ramp R→L, Random.
 - **Width** — 0 = centred, 1 = hard L/R.
+- **Keep accents centred** — loud hits (the main hat) stay up the middle while
+  quiet ghost hats fan out — how pro hats sit wide without the groove drifting.
+- **Accent threshold** — velocity above which a note counts as an accent.
 - **Only selected notes**.
 
 ### 3. PLG Quantize Opium
 Quantize that keeps a human/trap feel instead of a robotic grid.
 - **Grid** — 1/8, 1/16, 1/16 triplet, 1/4.
 - **Strength** — how hard notes are pulled to the grid (1 = exact).
-- **Swing** — delays off-beats for groove.
+- **Swing** — drags the off-beat 1/16s (referenced to a fixed 1/16 feel, so it
+  swings musically regardless of the quantize grid).
 - **Looseness** — small random offset so it never sounds machine-perfect.
 
 ### 4. PLG Import ALL
@@ -58,11 +64,14 @@ piano roll, colour-coded (hats / 808 / melody).
   script is the in-piano-roll companion / fallback.
 
 ### 5. PLG 808 Glide
-Adds slide + portamento glide to 808 notes.
+Adds slide + portamento glide to 808 notes, and manages note length so the glide
+actually has somewhere to slide to.
 - **Slide**, **Portamento** — toggle each (FL's API can only turn these *on*,
   which is what we want).
-- **Stretch to next note** — butts each note against the next so the glide has
-  somewhere to slide to.
+- **Stretch to next note** — butts each note against the next.
+- **Overlap (beats)** — extend each note *past* the next note's start for a
+  smooth, continuous slide.
+- **Min length (beats)** — force short 808s up to a minimum so they're audible.
 - **Only selected notes**.
 
 ---
