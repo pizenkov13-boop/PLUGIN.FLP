@@ -1,0 +1,11 @@
+# Optional extras — install only what you need:
+#
+#   pip install -r requirements-optional.txt
+#
+# demucs     ~2 GB + torch — stem splitter (Tools → Split Stems)
+# music21    music theory checks (heavy; experimental)
+# pyflp      read/write .flp via API (may fail on Python 3.12 / FL 2025 files)
+
+demucs>=4.0.0
+music21>=9.0.0
+pyflp>=2.2.1

@@ -57,6 +57,7 @@ def format_build_guide(data: dict[str, Any]) -> str:
     order = data.get("build_order") or list(TRACK_KEYS) + ["samples", "fx_automation", "vocal_fx"]
     lines = [
         f"PLG | BPM {data.get('bpm', '?')} | {data.get('style', 'unknown')}",
+        f"Producer mode: Don Toliver / Opium FL workflow",
         "",
         "Build order:",
     ]
@@ -88,5 +89,17 @@ def format_build_guide(data: dict[str, Any]) -> str:
         lines.extend(["", "Manual:"])
         lines.extend(f"- {item}" for item in manual)
 
-    lines.extend(["", "FL: Piano roll -> Scripts -> PLG PLUGIN.FLP"])
+    if data.get("starter_mode"):
+        workflow = (
+            "Starter sounds are loaded in FL — press Play. "
+            "Swap samples on PLG channels anytime for your sound."
+        )
+    else:
+        workflow = "Don workflow: drag YOUR 808/hats/lead onto PLG channels → FX on 808 → Mixer F9"
+    lines.extend([
+        "",
+        workflow,
+        "FL: Piano roll -> Scripts -> PLG (Hat Roll, 808 Glide, Pan Spread)",
+        "Full guide: FL_WORKFLOWS.md",
+    ])
     return "\n".join(lines)

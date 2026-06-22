@@ -20,8 +20,9 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent
-THEMES_DIR = PROJECT_DIR / "themes"
+from plg_paths import resource_path
+
+THEMES_DIR = resource_path("themes")
 
 
 def fl_themes_dir() -> Path:

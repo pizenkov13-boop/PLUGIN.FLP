@@ -1,0 +1,8 @@
+{
+  "source": "plg_synth",
+  "files": {
+    "hi_hats": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_hat.wav",
+    "sub_808": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_808.wav",
+    "melody_lead": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_melody.wav"
+  }
+}

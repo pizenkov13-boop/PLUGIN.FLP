@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-os.chdir(Path(__file__).resolve().parent)
+from plg_paths import app_dir
+
+os.chdir(app_dir())
 
 from plg_app import main
 

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent
+from plg_paths import app_dir
+
+PROJECT_DIR = app_dir()
 DEFAULT_LIBRARY_DIR = PROJECT_DIR / "PLG_Library"
 LEGACY_LIBRARY_DIR = PROJECT_DIR / "PLG_Sounds"
 

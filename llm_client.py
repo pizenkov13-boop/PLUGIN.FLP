@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Any
 
 DEFAULT_PROVIDER = "gemini"
@@ -12,6 +13,8 @@ GEMINI_MODEL = "gemini-2.5-flash"
 CLAUDE_MODEL = "claude-sonnet-4-6"
 LLM_TIMEOUT_MS = int(os.environ.get("PLG_LLM_TIMEOUT_MS", "90000"))
 LLM_RETRY_ATTEMPTS = int(os.environ.get("PLG_LLM_RETRY_ATTEMPTS", "2"))
+GEMINI_BUSY_RETRIES = int(os.environ.get("PLG_GEMINI_BUSY_RETRIES", "4"))
+GEMINI_BUSY_WAIT_S = float(os.environ.get("PLG_GEMINI_BUSY_WAIT_S", "8"))
 
 
 def get_provider() -> str:
@@ -54,9 +57,37 @@ def _anthropic_api_key() -> str:
     return api_key
 
 
+def _is_retryable_provider_error(exc: Exception) -> bool:
+    text = str(exc).upper()
+    markers = (
+        "503",
+        "UNAVAILABLE",
+        "HIGH DEMAND",
+        "429",
+        "RESOURCE_EXHAUSTED",
+        "500",
+        "INTERNAL",
+        "OVERLOADED",
+        "DEADLINE",
+    )
+    return any(marker in text for marker in markers)
+
+
 def format_llm_error(exc: Exception) -> str:
     text = str(exc).strip() or exc.__class__.__name__
     upper = text.upper()
+
+    if "503" in text or "UNAVAILABLE" in upper or "HIGH DEMAND" in upper:
+        model = _gemini_model()
+        return (
+            "Gemini is overloaded right now (503).\n\n"
+            f"Model: {model}\n\n"
+            "Google's servers are busy — this is usually temporary.\n\n"
+            "What to do:\n"
+            "1. Wait 30–60 seconds and click CREATE BEAT again\n"
+            "2. Try again in a few minutes\n"
+            "3. Settings → switch to anthropic if you have a Claude key"
+        )
 
     if "429" in text or "RESOURCE_EXHAUSTED" in upper or "QUOTA" in upper:
         model = _gemini_model()
@@ -116,25 +147,47 @@ def _generate_gemini(
             retry_options=types.HttpRetryOptions(attempts=LLM_RETRY_ATTEMPTS),
         ),
     )
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            response_mime_type="application/json",
-            response_json_schema=json_schema,
-            temperature=0.85,
-        ),
-    )
 
-    raw_text = response.text
-    if not raw_text or not raw_text.strip():
-        raise RuntimeError("Gemini returned an empty response.")
+    last_exc: Exception | None = None
+    for attempt in range(GEMINI_BUSY_RETRIES):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    response_json_schema=json_schema,
+                    temperature=0.85,
+                ),
+            )
 
-    data = json.loads(raw_text)
-    if not isinstance(data, dict) or "tracks" not in data:
-        raise RuntimeError("Expected JSON with bpm, tracks, build_order.")
-    return data
+            raw_text = response.text
+            if not raw_text or not raw_text.strip():
+                raise RuntimeError("Gemini returned an empty response.")
+
+            data = json.loads(raw_text)
+            if not isinstance(data, dict) or "tracks" not in data:
+                raise RuntimeError("Expected JSON with bpm, tracks, build_order.")
+            return data
+        except Exception as exc:
+            last_exc = exc
+            if attempt + 1 < GEMINI_BUSY_RETRIES and _is_retryable_provider_error(exc):
+                wait = GEMINI_BUSY_WAIT_S * (2**attempt)
+                logging.warning(
+                    "Gemini busy (attempt %s/%s), retry in %.0fs: %s",
+                    attempt + 1,
+                    GEMINI_BUSY_RETRIES,
+                    wait,
+                    exc,
+                )
+                time.sleep(wait)
+                continue
+            raise
+
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("Gemini request failed.")
 
 
 def _generate_anthropic(

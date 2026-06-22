@@ -15,7 +15,13 @@ sample_catalog.json
 build_guide.txt
 output_midi/
 output_preview.wav
+output_stems/
 PLG_Session.flp
+beat_quota.json
+
+# PyInstaller
+build/
+dist/
 
 # Logs
 *.log

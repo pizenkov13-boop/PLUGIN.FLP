@@ -8,14 +8,16 @@ import tkinter as tk
 from io import BytesIO
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent
+from plg_paths import app_dir, resource_path
+
+PROJECT_DIR = app_dir()
 LOGO_CANDIDATES = (
-    PROJECT_DIR / "assets" / "logo.png",
-    PROJECT_DIR / "assets" / "logo.jpg",
-    PROJECT_DIR / "assets" / "logo.svg",
-    PROJECT_DIR / "plug.jpg",
+    resource_path("assets", "logo.png"),
+    resource_path("assets", "logo.jpg"),
+    resource_path("assets", "logo.svg"),
+    resource_path("plug.jpg"),
 )
-LOGO_PNG_CACHE = PROJECT_DIR / "assets" / "logo.png"
+LOGO_PNG_CACHE = app_dir() / "assets" / "logo.png"
 
 
 def _load_image_file(path: Path):
@@ -55,7 +57,7 @@ def _rasterize_brand_mark():
 def ensure_logo_png() -> Path | None:
     if LOGO_PNG_CACHE.is_file():
         return LOGO_PNG_CACHE
-    svg = PROJECT_DIR / "assets" / "logo.svg"
+    svg = resource_path("assets", "logo.svg")
     if not svg.is_file():
         return None
     try:

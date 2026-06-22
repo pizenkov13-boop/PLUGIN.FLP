@@ -7,8 +7,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from library_paths import DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
+from plg_paths import app_dir
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = app_dir()
 ENV_FILE = PROJECT_DIR / ".env"
 ENV_EXAMPLE = PROJECT_DIR / ".env.example"
 

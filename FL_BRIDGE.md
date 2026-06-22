@@ -26,10 +26,10 @@ FL. That is the whole bridge.
 output_pattern.json  ──▶  flp_writer.build_flp()  ──▶  PLG_Session.flp  ──▶  FL64.exe <file>
 ```
 
-The three channels are **empty Sampler channels** — and that is intentional.
-PLG's promise is *your sound*: you drag your own 808 onto **PLG Sub 808**, your
-hats onto **PLG Hi-Hats**, your lead onto **PLG Melody / Lead**. The notes,
-timing, and names are ready; the sound is yours.
+The three channels are **Sampler channels with notes**. When your kit folder is
+empty, PLG embeds **starter wav paths** (`assets/starter/`) so FL loads audible
+808 / hat / melody out of the box. When you add your own library, those paths
+are used instead — swap anytime for *your sound*.
 
 ### Why not the other approaches?
 

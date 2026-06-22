@@ -22,13 +22,15 @@ from app_config import (
     write_env_file,
 )
 from backend_core import PROJECT_DIR, ensure_samples_library, resolve_samples_dir, run_pipeline
+from beat_quota import BeatQuotaExceeded, consume_beat, ensure_can_consume_beat, format_quota_label, get_quota_snapshot
 from fl_launch import open_beat_in_fl
-from fl_setup import install_plugin_script, is_plugin_script_installed
-from fl_import import is_fl_import_configured, mark_fl_import_configured
+from fl_setup import install_all, is_fl_bridge_ready
 from library_catalog import save_catalog, scan_library
 from llm_client import format_llm_error, provider_label
 from logo_loader import load_logo_photo
-from organize_kit import organize_library
+from stem_split import StemSplitError, split_stems, stems_available
+from starter_kit import ensure_starter_kit
+from theme_install import install_themes
 from plg_theme import (
     ACCENT,
     BG,
@@ -203,6 +205,7 @@ class PlgApp(tk.Tk):
         super().__init__()
         load_environment()
         setup_gui_logging()
+        ensure_starter_kit()
         self.title("PLG — PLUGIN.FLP")
         self.geometry("720x420")
         self.minsize(640, 380)
@@ -216,8 +219,10 @@ class PlgApp(tk.Tk):
         self._placeholder_active = True
         self._status = tk.StringVar(value="Ready")
         self._meta = tk.StringVar(value="BPM —  |  Style —")
+        self._quota = tk.StringVar(value="")
         self._provider_badge = tk.StringVar(value=provider_label())
         self._status_tone = "idle"
+        self._empty_lib_warned = False
 
         apply_theme(self)
         self._build_menu()
@@ -243,6 +248,14 @@ class PlgApp(tk.Tk):
                     else:
                         self.set_status("FL error", tone="error")
                     messagebox.showwarning("PLG", str(exc))
+                elif kind == "stem_done":
+                    self._on_stems_done(payload)  # type: ignore[arg-type]
+                elif kind == "stem_error":
+                    self._on_stems_error(payload)  # type: ignore[arg-type]
+                elif kind == "stem_progress":
+                    frac, msg = payload  # type: ignore[misc]
+                    pct = int(float(frac) * 100)
+                    self.set_status(f"Stems · {pct}% · {msg}", tone="busy")
         except queue.Empty:
             pass
         self.after(100, self._process_ui_queue)
@@ -264,11 +277,18 @@ class PlgApp(tk.Tk):
 
         tools_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
         tools_menu.add_command(label="Settings...", command=self.open_settings)
+        tools_menu.add_command(label="Upgrade Starter Sounds (optional)...", command=self.upgrade_starter_sounds)
         tools_menu.add_command(label="Install FL Scripts", command=self.install_fl_scripts)
+        tools_menu.add_command(label="Install FL Themes", command=self.install_fl_themes)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Split Stems from File...", command=self.split_stems_from_file)
         menu.add_cascade(label="Tools", menu=tools_menu)
 
         help_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
         help_menu.add_command(label="Quick Start", command=self.show_quick_start)
+        help_menu.add_command(label="Where is everything? (START_HERE)", command=self.open_start_here)
+        help_menu.add_command(label="FL Bridge Guide", command=self.open_fl_bridge_doc)
+        help_menu.add_command(label="Don FL Workflow", command=self.open_fl_workflows_doc)
         menu.add_cascade(label="Help", menu=help_menu)
 
     def _build_ui(self) -> None:
@@ -277,6 +297,7 @@ class PlgApp(tk.Tk):
         root.pack(fill="both", expand=True)
 
         self._build_header(root)
+        self._build_empty_library_banner(root)
         self._build_setup_strip(root)
         self._build_workflow(root)
         self._build_prompt_card(root)
@@ -335,12 +356,70 @@ class PlgApp(tk.Tk):
         badge.pack(anchor="e", pady=(0, 8))
         ttk.Button(right, text="Settings", style="Ghost.TButton", command=self.open_settings).pack(anchor="e")
 
+    def _build_empty_library_banner(self, parent: ttk.Frame) -> None:
+        self._library_banner = tk.Frame(parent, bg="#1a1408", highlightbackground="#4a3a10", highlightthickness=1)
+        inner = tk.Frame(self._library_banner, bg="#1a1408")
+        inner.pack(fill="x", padx=24, pady=10)
+
+        text = tk.Frame(inner, bg="#1a1408")
+        text.pack(side="left", fill="x", expand=True)
+
+        tk.Label(
+            text,
+            text="Starter sounds active — PLG loads built-in 808, hats, and melody into FL.",
+            bg="#1a1408",
+            fg=SUCCESS,
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            text,
+            text="Import your own kits anytime for a custom sound. Until then you can CREATE BEAT and OPEN IN FL right away.",
+            bg="#1a1408",
+            fg=TEXT_MUTED,
+            font=("Segoe UI", 9),
+            wraplength=520,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 0))
+
+        actions = tk.Frame(inner, bg="#1a1408")
+        actions.pack(side="right", padx=(12, 0))
+        ttk.Button(actions, text="Import Kit", style="Ghost.TButton", command=self.import_kit).pack(side="left")
+        ttk.Button(actions, text="Open Library", style="Ghost.TButton", command=self.open_samples).pack(
+            side="left", padx=(8, 0)
+        )
+
+    def _refresh_library_banner(self) -> None:
+        if self._library_has_audio():
+            self._library_banner.pack_forget()
+        else:
+            self._library_banner.pack(fill="x", after=self._header_frame)
+
+    def _strip_anchor(self) -> tk.Widget:
+        if self._library_banner.winfo_ismapped():
+            return self._library_banner
+        return self._header_frame
+
+    def _confirm_empty_library_create(self) -> bool:
+        if self._library_has_audio():
+            return True
+        if self._empty_lib_warned:
+            return True
+        self._empty_lib_warned = True
+        messagebox.showinfo(
+            "PLG starter sounds",
+            "Your kit folder is empty — that's OK.\n\n"
+            "PLG loads built-in starter 808, hats, and melody into FL automatically.\n"
+            "Add your own kits anytime via Import Kit or Open Library.",
+        )
+        return True
+
     def _build_setup_strip(self, parent: ttk.Frame) -> None:
         self._setup_strip = tk.Frame(parent, bg=BG_ELEVATED)
         self._setup_inner = tk.Frame(self._setup_strip, bg=BG_ELEVATED)
         self._setup_inner.pack(fill="x", padx=24, pady=(0, 8))
 
     def _refresh_setup_strip(self) -> None:
+        self._refresh_library_banner()
         for child in self._setup_inner.winfo_children():
             child.destroy()
 
@@ -348,17 +427,15 @@ class PlgApp(tk.Tk):
         if not has_api_key():
             hints.append(("Add API key for AI generation", self.open_settings))
         if not self._library_has_audio():
-            hints.append(("Add samples to library (optional)", self.open_samples))
-        if not is_plugin_script_installed(PROJECT_DIR):
-            hints.append(("Connect FL Studio", self.install_fl_scripts))
-        if not is_fl_import_configured(PROJECT_DIR):
-            hints.append(("Confirm FL MIDI import once", self._show_fl_import_hint))
+            hints.append(("Add your kits for custom sound (starter included)", self.import_kit))
+        if not is_fl_bridge_ready(PROJECT_DIR):
+            hints.append(("Install FL scripts", self.install_fl_scripts))
 
         if not hints:
             self._setup_strip.pack_forget()
             return
 
-        self._setup_strip.pack(fill="x", after=self._header_frame)
+        self._setup_strip.pack(fill="x", after=self._strip_anchor())
         for index, (text, command) in enumerate(hints):
             if index:
                 tk.Label(self._setup_inner, text="·", bg=BG_ELEVATED, fg=TEXT_DIM, font=("Segoe UI", 9)).pack(
@@ -477,6 +554,9 @@ class PlgApp(tk.Tk):
 
         tk.Label(left, textvariable=self._status, bg=BG_ELEVATED, fg=TEXT, font=("Segoe UI", 9)).pack(side="left")
 
+        tk.Label(bar, textvariable=self._quota, bg=BG_ELEVATED, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(
+            side="right", padx=(0, 4), pady=10
+        )
         tk.Label(bar, textvariable=self._meta, bg=BG_ELEVATED, fg=TEXT_MUTED, font=("Segoe UI", 9), padx=16).pack(
             side="right", pady=10
         )
@@ -507,16 +587,29 @@ class PlgApp(tk.Tk):
             return ""
         return self.prompt_box.get("1.0", "end").strip()
 
+    def _refresh_beat_quota(self) -> None:
+        if not has_api_key():
+            self._quota.set("")
+            return
+        self._quota.set(format_quota_label())
+
     def _boot_message(self) -> None:
         ensure_samples_library(get_samples_dir(), quiet=True)
         self._provider_badge.set(provider_label())
         self._sync_beat_state()
         self._refresh_setup_strip()
+        self._refresh_beat_quota()
         if self._beat_ready:
             self._load_beat_meta()
-            self.set_status("Beat ready — open in FL Studio", tone="ok")
+            if self._library_has_audio():
+                self.set_status("Beat ready — open in FL Studio", tone="ok")
+            else:
+                self.set_status("Beat ready — starter sounds load in FL", tone="ok")
         elif has_api_key():
-            self.set_status("Ready — describe your beat", tone="idle")
+            if self._library_has_audio():
+                self.set_status("Ready — describe your beat", tone="idle")
+            else:
+                self.set_status("Ready — starter pack included, describe your beat", tone="idle")
         else:
             self.set_status("Add API key to generate beats", tone="idle")
 
@@ -533,6 +626,7 @@ class PlgApp(tk.Tk):
         ensure_samples_library(get_samples_dir(), quiet=True)
         self._provider_badge.set(provider_label())
         self._refresh_setup_strip()
+        self._refresh_beat_quota()
         self.set_status("Settings saved", tone="idle")
 
     def set_status(self, text: str, *, tone: str | None = None) -> None:
@@ -550,18 +644,134 @@ class PlgApp(tk.Tk):
     def show_quick_start(self) -> None:
         messagebox.showinfo(
             "PLG Quick Start",
-            "1. Describe your beat in the prompt box\n"
-            "2. CREATE BEAT (Ctrl+Enter) — AI writes notes to output_pattern.json\n"
-            "3. OPEN IN FL — exports MIDI + opens FL Studio\n"
-            "4. In FL: Piano roll → Scripts → PLG PLUGIN.FLP (per layer)\n\n"
-            "File → Import Kit Folder — sort FL Mafia downloads into library.\n"
-            "API key is only for AI generation — FL bridge is local on your PC.",
+            "1. Describe your beat → CREATE BEAT (Ctrl+Enter)\n"
+            "2. OPEN IN FL — 3 channels + starter sounds + notes\n"
+            "3. Play in FL Studio\n\n"
+            "Starter sounds are BUNDLED — no download needed.\n\n"
+            "Optional better trap sound:\n"
+            "  Tools → Upgrade Starter Sounds (optional)\n"
+            "  or install_starter_sounds.bat → zips to assets/starter/incoming/\n\n"
+            "Sell / Gumroad .exe: run build_plg.bat → dist\\PLG.exe\n"
+            "Full map: Help → Where is everything? (START_HERE)",
         )
+
+    def open_start_here(self) -> None:
+        path = PROJECT_DIR / "START_HERE.md"
+        if path.is_file():
+            os.startfile(path)  # type: ignore[attr-defined]
+        else:
+            messagebox.showinfo("PLG", "START_HERE.md not found in the PLG folder.")
+
+    def open_fl_workflows_doc(self) -> None:
+        path = PROJECT_DIR / "FL_WORKFLOWS.md"
+        if path.is_file():
+            os.startfile(path)  # type: ignore[attr-defined]
+        else:
+            messagebox.showinfo("PLG", "FL_WORKFLOWS.md not found.")
+
+    def open_fl_bridge_doc(self) -> None:
+        path = PROJECT_DIR / "FL_BRIDGE.md"
+        if path.is_file():
+            os.startfile(path)  # type: ignore[attr-defined]
+        else:
+            messagebox.showinfo("PLG", "FL_BRIDGE.md not found in the project folder.")
+
+    def install_fl_themes(self) -> None:
+        try:
+            result = install_themes()
+            themes = result.get("themes") or []
+            specs = result.get("specs") or []
+            self.set_status("FL theme specs installed", tone="ok")
+            messagebox.showinfo(
+                "PLG Themes",
+                f"Installed {len(specs)} color spec(s) to FL Themes/PLG/\n"
+                f"Installed {len(themes)} .flstheme file(s).\n\n"
+                "Open FL → theme editor → apply hex values from THEMES.md\n"
+                "or the JSON files in your FL Themes/PLG folder.",
+            )
+        except OSError as exc:
+            messagebox.showerror("PLG", str(exc))
+
+    def split_stems_from_file(self) -> None:
+        if self._busy:
+            messagebox.showinfo("PLG", "Wait for the current task to finish.")
+            return
+        if not stems_available():
+            if not messagebox.askyesno(
+                "Stem splitter",
+                "Demucs is not installed (optional, ~2 GB download).\n\n"
+                "    pip install -U demucs\n\n"
+                "Open stem splitter docs anyway?",
+            ):
+                return
+            path = PROJECT_DIR / "stem_split.py"
+            if path.is_file():
+                os.startfile(path)  # type: ignore[attr-defined]
+            return
+
+        source = filedialog.askopenfilename(
+            title="Select track to split (MP3 or WAV)",
+            filetypes=[("Audio", "*.wav *.mp3 *.flac *.ogg"), ("All files", "*.*")],
+        )
+        if not source:
+            return
+
+        self._busy = True
+        self.create_btn.configure(state="disabled")
+        self.fl_btn.configure(state="disabled")
+        self.regen_btn.configure(state="disabled")
+        self.set_status("Splitting stems…", tone="busy")
+
+        def worker() -> None:
+            try:
+                out_dir = PROJECT_DIR / "output_stems" / Path(source).stem
+                result = split_stems(
+                    Path(source),
+                    out_dir,
+                    progress_cb=lambda frac, msg: self._ui_queue.put(
+                        ("stem_progress", (frac, msg))
+                    ),
+                )
+                self._ui_queue.put(("stem_done", result))
+            except (StemSplitError, OSError) as exc:
+                self._ui_queue.put(("stem_error", exc))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_stems_done(self, result: dict) -> None:
+        self._busy = False
+        self._update_action_buttons()
+        self.set_status("Stems ready", tone="ok")
+        folder = next(iter(result.values())).parent
+        messagebox.showinfo(
+            "PLG Stems",
+            f"Wrote {len(result)} stem(s):\n"
+            + "\n".join(f"  {name}: {path.name}" for name, path in result.items())
+            + f"\n\nFolder:\n{folder}",
+        )
+        os.startfile(folder)  # type: ignore[attr-defined]
+
+    def _on_stems_error(self, exc: Exception) -> None:
+        self._busy = False
+        self._update_action_buttons()
+        self.set_status("Stem split failed", tone="error")
+        messagebox.showerror("PLG Stems", str(exc))
 
     def on_regenerate(self) -> None:
         if not self._last_prompt and not self._prompt_text():
             messagebox.showwarning("PLG", "Describe your beat first.")
             return
+        snap = get_quota_snapshot()
+        if not snap.get("skipped"):
+            days = snap["days_until_reset"]
+            day_word = "day" if days == 1 else "days"
+            if not messagebox.askyesno(
+                "Regenerate beat",
+                "Regenerating uses 1 beat from your plan.\n\n"
+                f"{snap['remaining']} of {snap['limit']} beats left · resets in {days} {day_word}.\n\n"
+                "Continue?",
+            ):
+                return
         if self._last_prompt and not self._prompt_text():
             self.prompt_box.delete("1.0", "end")
             self.prompt_box.insert("1.0", self._last_prompt)
@@ -575,6 +785,16 @@ class PlgApp(tk.Tk):
 
         if not has_api_key():
             self.open_settings()
+            return
+
+        try:
+            ensure_can_consume_beat()
+        except BeatQuotaExceeded as exc:
+            messagebox.showwarning("PLG", str(exc))
+            self._refresh_beat_quota()
+            return
+
+        if not self._confirm_empty_library_create():
             return
 
         prompt = self._prompt_text()
@@ -641,6 +861,11 @@ class PlgApp(tk.Tk):
 
     def _on_success(self, pattern: dict) -> None:
         self._stop_busy()
+        try:
+            consume_beat()
+        except BeatQuotaExceeded:
+            pass
+        self._refresh_beat_quota()
         self._beat_ready = True
         bpm = pattern.get("bpm", "—")
         style = pattern.get("style", "unknown")
@@ -658,25 +883,16 @@ class PlgApp(tk.Tk):
             result = open_beat_in_fl(PROJECT_DIR)
             logging.info("OPEN IN FL ok: imported=%s method=%s", result.get("imported"), result.get("import_method"))
             self._ui_queue.put(("fl_done", result))
-        except FileNotFoundError as exc:
-            logging.exception("OPEN IN FL failed")
-            self._ui_queue.put(("fl_error", exc))
-        except OSError as exc:
+        except (FileNotFoundError, ValueError, OSError) as exc:
             logging.exception("OPEN IN FL failed")
             self._ui_queue.put(("fl_error", exc))
 
     def _on_fl_opened(self, result: dict) -> None:
-        if result.get("imported"):
+        method = str(result.get("import_method", ""))
+        if result.get("imported") and method == "flp_session":
+            self.set_status("FL Studio · 3 channels ready — load your sounds", tone="ok")
+        elif result.get("imported"):
             self.set_status("FL Studio · 3 tracks imported", tone="ok")
-        elif result.get("import_method") == "explorer_fallback":
-            self.set_status("FL opened — drag PLG_Beat.mid into FL", tone="busy")
-            messagebox.showinfo(
-                "PLG → FL Studio",
-                "FL opened but auto-import missed.\n\n"
-                "1. Explorer shows PLG_Beat.mid\n"
-                "2. Drag it onto empty area in FL (not channel rack)\n"
-                "3. Enable: Create one channel per track → Accept",
-            )
         else:
             self.set_status("FL Studio opened", tone="ok")
         self._refresh_setup_strip()
@@ -715,20 +931,43 @@ class PlgApp(tk.Tk):
                 return
             catalog = scan_library(library)
             save_catalog(catalog, PROJECT_DIR / "sample_catalog.json")
+            self._empty_lib_warned = False
             self._refresh_setup_strip()
             messagebox.showinfo("PLG", f"Imported {total} files into library.")
         except (OSError, FileNotFoundError) as exc:
             messagebox.showerror("PLG", str(exc))
 
+    def upgrade_starter_sounds(self) -> None:
+        import subprocess
+        import sys
+
+        bat = PROJECT_DIR / "install_starter_sounds.bat"
+        if sys.platform == "win32" and bat.is_file():
+            subprocess.Popen(["cmd", "/c", "start", "", str(bat)], cwd=str(PROJECT_DIR))
+            messagebox.showinfo(
+                "PLG Starter",
+                "Bundled starter sounds are already active.\n\n"
+                "Optional: download 3 free CC0 packs from Signature Sounds, "
+                "drop zips into assets/starter/incoming/, run the installer again.",
+            )
+        else:
+            messagebox.showinfo(
+                "PLG Starter",
+                "Bundled starter is already included.\n\n"
+                "Optional CC0 upgrade: see assets/starter/README.md",
+            )
+
     def install_fl_scripts(self) -> None:
         try:
-            path = install_plugin_script(PROJECT_DIR)
+            installed = install_all(PROJECT_DIR)
+            pack = installed.get("script_pack") or []
             self._refresh_setup_strip()
             messagebox.showinfo(
                 "PLG",
-                f"FL script installed:\n{path}\n\n"
-                "In FL Studio: Piano roll → Scripts → PLG PLUGIN.FLP\n"
-                "Pick a layer (hi-hats, 808, melody) to import notes.",
+                f"FL scripts installed.\n\n"
+                f"Importer: {installed['plugin_script']}\n"
+                f"Script pack: {len(pack)} tools in Piano roll → Scripts → PLG\n\n"
+                "OPEN IN FL loads PLG_Session.flp automatically.",
             )
         except OSError as exc:
             messagebox.showerror("PLG", str(exc))
@@ -740,20 +979,6 @@ class PlgApp(tk.Tk):
 
     def open_output_folder(self) -> None:
         os.startfile(PROJECT_DIR)  # type: ignore[attr-defined]
-
-    def _show_fl_import_hint(self) -> None:
-        if messagebox.askyesno(
-            "PLG → FL Studio",
-            "First time only:\n\n"
-            "1. OPEN IN FL drops PLG_Beat.mid into FL Studio\n"
-            "2. In the import dialog enable:\n"
-            "   • Create one channel per track\n"
-            "   • Channel type: FLEX\n"
-            "3. Click Accept\n\n"
-            "Did you complete this setup?",
-        ):
-            mark_fl_import_configured(PROJECT_DIR)
-            self._refresh_setup_strip()
 
     def open_in_fl_studio(self, *, silent: bool = False) -> None:
         try:

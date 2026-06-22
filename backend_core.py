@@ -17,11 +17,13 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from fl_knowledge import full_producer_context
 from library_paths import ALL_LIBRARY_FOLDERS, DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
 from llm_client import generate_pattern as llm_generate_pattern, provider_label
+from plg_paths import app_dir
 from sample_catalog import format_catalog_for_prompt, save_catalog, scan_library, scan_samples_directory
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = app_dir()
 OUTPUT_FILE = PROJECT_DIR / "output_pattern.json"
 CATALOG_FILE = PROJECT_DIR / "sample_catalog.json"
 ENV_FILE = PROJECT_DIR / ".env"
@@ -136,15 +138,18 @@ RESPONSE_JSON_SCHEMA: dict[str, Any] = {
 }
 
 SYSTEM_INSTRUCTION_BASE = """\
-Ты — главный ИИ-движок PLUGIN.FLP (PLG). Переводи любой промпт в JSON для FL Studio.
+Ты — продюсер уровня F1LTHY / Working on Dying / Opium (Playboi Carti, Ken Carson, Destroy Lonely) и мелодичной стороны Don Toliver в FL Studio. Главный ИИ-движок PLUGIN.FLP (PLG). Переводи промпт в JSON для FL.
+
+Ты знаешь Channel Rack, Piano roll, Mixer, нативные плагины FL. Пишешь как человек, который живёт в FL, а не как ChatGPT. Звук: тёмный, гипнотичный, минимальный — дисторшн на 808, эфирные detuned лиды, space важнее загромождения.
 
 Порядок сборки (build_order) — всегда указывай массив шагов, например:
 ["hi_hats", "sub_808", "melody_lead", "samples", "fx_automation", "vocal_fx"]
 
-tracks — три MIDI-дорожки (time_step: 1.0 = один удар/бит, 0.25 = шестнадцатая, 4.0 = один такт):
-1) hi_hats — ритм, rolls, шаг 0.25–0.5
-2) sub_808 — бас по root notes, velocity 127, длина ~4.0 на такт
-3) melody_lead — мелодия/аккорды под стиль промпта
+tracks — три MIDI-дорожки (time_step: 1.0 = один удар/бит, 0.25 = шестнадцатая, 4.0 = один такт).
+КОНКРЕТНЫЕ ПАТТЕРНЫ (дефолт, если промпт не говорит иначе):
+1) hi_hats — ровный pocket 1/8–1/16 (шаг 0.25–0.5) + HAT ROLL каждые 2 такта (триоль/1-16 в конце 2-го и 4-го такта), НЕ постоянная стрельба.
+2) sub_808 — roots на 1 и 3 долю такта (time_step 0.0 и 2.0 внутри такта), slides между нотами, velocity 127, длина 2.0–4.0.
+3) melody_lead — minor dark цепляющий hook, 1–2 октавы, паузы каждые 2 такта под вокал, 4–8 тактов.
 
 Если передан LIBRARY CATALOG — используй все типы ассетов:
 
@@ -163,15 +168,15 @@ BANKS (.sf2) — library_refs type=bank: Fruity Soundfont или sampler.
 
 PLUGINS (.dll .vst3) — library_refs type=plugin: только manual_steps «установи вручную», PLG не ставит плагины.
 
-FX встроенные FL — при dist/opium/ken carson:
-Channel_Precomputed boost=0.30, Fruity_Fast_Dist drive=0.90 mix=1.0, Fruity_WaveShaper boost=0.40
+FX встроенные FL — Don/Opium/trap (почти всегда включай fx_automation):
+Channel_Precomputed boost=0.30, Fruity_Fast_Dist drive=0.88–0.95 mix=1.0, Fruity_WaveShaper boost=0.35–0.45
 
-vocal_fx — если промпт про вокал/autotune/weeknd/travis (НЕ AI-голос, только FX на голос юзера):
-reference, pitch_correction (soft/hard), autotune_retune, reverb, delay
+vocal_fx — если промпт про вокал/singing/Don/travis (НЕ AI-голос, только FX на голос юзера):
+reference don toliver melodic, pitch_correction soft, autotune_retune light, reverb plate, delay 1/8 dotted
 
-manual_steps — если что-то нельзя автоматизировать, дай 2-5 коротких шагов под версию FL из профиля.
+manual_steps — 3–6 шагов как Don кликал бы в FL 2025: Sampler → FX → Mixer. Указывай имена каналов PLG Sub 808 / PLG Hi-Hats / PLG Melody.
 
-Любой стиль: opium, pop, drill, grind, anti-music, dua lipa — адаптируй всё под промпт.
+Любой стиль: opium, f1lthy, working on dying, ken carson, destroy lonely, don toliver, drill — адаптируй паттерны, но мышление оставь FL-native продюсера.
 4-8 тактов. Только чистый JSON.\
 """
 
@@ -222,24 +227,36 @@ def ensure_samples_library(samples_dir: Path, *, quiet: bool = False) -> None:
 
 
 def load_user_profile() -> dict[str, str]:
+    defaults = {
+        "fl_version": "2025",
+        "fl_edition": "producer",
+        "os": "windows",
+        "producer_mode": "don_toliver",
+        "workflow": "opium melodic trap",
+        "references": "don toliver, opium, travis scott",
+    }
     if USER_PROFILE_FILE.exists():
         data = json.loads(USER_PROFILE_FILE.read_text(encoding="utf-8"))
         if isinstance(data, dict):
-            return {
-                "fl_version": str(data.get("fl_version", "24")),
-                "fl_edition": str(data.get("fl_edition", "producer")),
-                "os": str(data.get("os", "windows")),
-            }
-    return {"fl_version": "24", "fl_edition": "producer", "os": "windows"}
+            return {key: str(data.get(key, value)) for key, value in defaults.items()}
+    return defaults
 
 
 def build_system_instruction(profile: dict[str, str], catalog: dict | None) -> str:
-    parts = [SYSTEM_INSTRUCTION_BASE, "", "FL user profile:"]
+    parts = [SYSTEM_INSTRUCTION_BASE, "", full_producer_context(), "", "FL user profile:"]
     parts.append(json.dumps(profile, ensure_ascii=False))
     if catalog and catalog.get("total", 0) > 0:
         parts.extend(["", "LIBRARY CATALOG:", format_catalog_for_prompt(catalog)])
     else:
-        parts.append("\nLibrary empty — use MIDI notes only; samples[] and library_refs can be omitted.")
+        parts.extend(
+            [
+                "\nLIBRARY EMPTY — MIDI ONLY MODE.",
+                "Return samples[] as an empty array. Do NOT request, name or invent any sample files or paths.",
+                "Do NOT add library_refs. Put ALL the work into MIDI: hi_hats, sub_808, melody_lead, "
+                "bpm, fx_automation, build_order, manual_steps.",
+                "PLG auto-attaches its own built-in starter sounds (808, hat, melody) after generation.",
+            ]
+        )
     return "\n".join(parts)
 
 
@@ -296,21 +313,29 @@ def run_pipeline(
     logging.info("Library: %s assets (%s audio)", catalog["total"], catalog.get("audio_total", 0))
 
     if catalog.get("audio_total", 0) == 0:
-        logging.warning("No audio in library — MIDI-only mode until kits are added")
+        logging.info("No user audio in library — using PLG starter sound pack")
 
     profile = load_user_profile()
     system_instruction = build_system_instruction(profile, catalog)
     logging.info("LLM provider: %s", provider_label())
     pattern = generate_pattern(prompt, system_instruction)
     pattern["sample_library"] = catalog["root"]
+
+    from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
+
+    ensure_starter_kit()
+    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples)
     save_pattern(pattern)
 
     if export_midi:
         from midi_export import export_combined_midi, export_pattern_to_midi
+        from midi_validate import log_validation_report, validate_export
 
-        paths = export_pattern_to_midi(pattern)
-        combined = export_combined_midi(pattern)
+        midi_dir = PROJECT_DIR / "output_midi"
+        paths = export_pattern_to_midi(pattern, midi_dir)
+        combined = export_combined_midi(pattern, midi_dir / "PLG_Beat.mid")
         logging.info("MIDI exported: %s files + %s", len(paths), combined.name)
+        log_validation_report(validate_export(pattern, midi_dir=midi_dir, combined=combined))
 
     from guide_export import export_build_guide
 

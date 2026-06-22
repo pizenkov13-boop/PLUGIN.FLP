@@ -12,7 +12,9 @@ import json
 import subprocess
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).resolve().parent
+from plg_paths import app_dir
+
+PROJECT_DIR = app_dir()
 PATTERN_JSON = PROJECT_DIR / "output_pattern.json"
 COMBINED_MIDI = PROJECT_DIR / "output_midi" / "PLG_Beat.mid"
 SESSION_FLP = PROJECT_DIR / "PLG_Session.flp"
@@ -65,6 +67,14 @@ def open_beat_in_fl(project_dir: Path | None = None) -> dict[str, Path | str | b
     data = json.loads(pattern_path.read_text(encoding="utf-8"))
     if not _has_notes(data):
         raise ValueError("This beat has no MIDI notes to load into FL.")
+
+    from library_catalog import scan_library
+    from starter_kit import attach_sounds_to_pattern
+
+    library_root = Path(data.get("sample_library") or root / "PLG_Library")
+    catalog = scan_library(library_root) if library_root.is_dir() else None
+    attach_sounds_to_pattern(data, catalog, library_root=library_root)
+    pattern_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # MIDI export is kept for manual import / other DAWs; the .flp is primary.
     midi_dir = root / "output_midi"

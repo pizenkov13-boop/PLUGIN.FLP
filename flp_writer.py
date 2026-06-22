@@ -9,10 +9,9 @@ automation proved unreliable (RU/EN UI, focus, OLE drag). The one thing FL
     FL64.exe C:\\PLUG.FLP\\PLG_Session.flp
 
 So PLG writes a tiny, valid ``.flp`` containing three named Sampler channels
-(Hi-Hats / Sub 808 / Melody) and one pattern holding the notes. The channels
-are intentionally *empty* samplers: the PLG product model is "your sound" — the
-producer drags their own 808/hats/melody onto the ready-made, correctly-named,
-correctly-noted channels.
+(Hi-Hats / Sub 808 / Melody) and one pattern holding the notes. When
+``plg_sound_paths`` is present in the pattern JSON, each channel also gets a
+``SamplePath`` event so FL loads starter or library wavs automatically.
 
 FLP format (TLV event stream), grounded in the PyFLP project:
   - Header  "FLhd" + u32 size(=6) + i16 format(=0) + u16 channel_count + u16 ppq
@@ -55,6 +54,7 @@ _TEMPO = _DWORD + 28        # 156, bpm * 1000
 _CH_NEW = _WORD + 0         # 64, u16 channel index (starts a channel block)
 _CH_TYPE = 21               # u8 channel kind, 0 = Sampler
 _CH_NAME = _TEXT + 0        # 192, channel display name
+_CH_SAMPLE_PATH = _TEXT + 4  # 196, absolute path to loaded sample (PyFLP SamplePath)
 # pattern
 _PAT_NEW = _WORD + 1        # 65, u16 pattern number (selects current pattern)
 _PAT_NAME = _TEXT + 1       # 193, pattern name
@@ -146,10 +146,25 @@ def _channels_with_layout(data: dict[str, Any]) -> list[str]:
     return [key for key in TRACK_KEYS]
 
 
+def _sample_paths_from_data(data: dict[str, Any]) -> dict[str, Path]:
+    raw = data.get("plg_sound_paths")
+    if not isinstance(raw, dict):
+        return {}
+    paths: dict[str, Path] = {}
+    for key, value in raw.items():
+        if not value:
+            continue
+        path = Path(str(value))
+        if path.is_file():
+            paths[str(key)] = path.resolve()
+    return paths
+
+
 def build_flp(data: dict[str, Any]) -> bytes:
     """Serialise a PLG pattern dict into FLP bytes."""
     bpm = float(data.get("bpm", 140))
     channels = _channels_with_layout(data)
+    sample_paths = _sample_paths_from_data(data)
 
     events = bytearray()
     events += _text_event(_VERSION, FL_VERSION, unicode=False)
@@ -159,6 +174,9 @@ def build_flp(data: dict[str, Any]) -> bytes:
         events += _word_event(_CH_NEW, index)
         events += _byte_event(_CH_TYPE, 0)  # Sampler
         events += _text_event(_CH_NAME, CHANNEL_NAMES.get(key, key))
+        sample_path = sample_paths.get(key)
+        if sample_path is not None:
+            events += _text_event(_CH_SAMPLE_PATH, str(sample_path))
 
     events += _word_event(_PAT_NEW, 1)
     events += _text_event(_PAT_NAME, "PLG Beat")

@@ -1,5 +1,8 @@
 {
-  "fl_version": "24",
+  "fl_version": "2025",
   "fl_edition": "producer",
-  "os": "windows"
+  "os": "windows",
+  "producer_mode": "don_toliver",
+  "workflow": "opium melodic trap",
+  "references": "don toliver, opium, travis scott"
 }
