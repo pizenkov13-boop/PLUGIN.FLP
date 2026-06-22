@@ -4,3 +4,7 @@ python-dotenv>=1.0.0
 MIDIUtil>=1.2.1
 pydub>=0.25.1
 Pillow>=10.0.0
+
+# Optional: AI stem splitter (stem_split.py). Heavy (~2 GB, pulls in torch).
+# Install only if you want the stems feature:
+#   pip install -U demucs
