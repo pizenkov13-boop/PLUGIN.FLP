@@ -1,0 +1,102 @@
+"""PLG Import ALL — load every PLG layer into the current piano roll.
+
+Reads c:\\PLUG.FLP\\output_pattern.json (BRIDGE_PATH is patched on install) and
+drops hi-hats + 808 + melody into the CURRENT piano roll, colour-coded per layer.
+
+Note: a piano roll script can only write to the channel it was opened from, so
+this stacks all layers on one channel. For three SEPARATE channels, use
+"OPEN IN FL" in the PLG app, which hands FL a ready-made .flp session.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+
+import flpianoroll as flp
+
+BRIDGE_PATH = r"c:\PLUG.FLP\output_pattern.json"
+
+# (json key, label, FL note colour 0-15)
+LAYERS = [
+    ("hi_hats", "Hi-Hats", 0),
+    ("sub_808", "Sub 808", 1),
+    ("melody_lead", "Melody / Lead", 2),
+]
+
+NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+NOTE_ALIASES = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#"}
+NOTE_INDEX = {name: idx for idx, name in enumerate(NOTE_NAMES)}
+NOTE_INDEX.update({a: NOTE_INDEX[m] for a, m in NOTE_ALIASES.items()})
+
+
+def parse_note_name(text):
+    text = text.strip()
+    if len(text) >= 3 and text[1] in "#b":
+        pitch = text[:2]
+        if pitch[1] == "b":
+            pitch = NOTE_ALIASES.get(pitch[0] + "b", pitch)
+        octave = int(text[2:])
+    elif len(text) >= 2:
+        pitch = text[0]
+        octave = int(text[1:])
+    else:
+        raise ValueError(text)
+    if pitch in NOTE_ALIASES:
+        pitch = NOTE_ALIASES[pitch]
+    return octave * 12 + NOTE_INDEX[pitch]
+
+
+def _ticks(time_step):
+    return int(round(float(time_step) * flp.score.PPQ))
+
+
+def createDialog():
+    form = flp.ScriptDialog(
+        "PLG Import ALL",
+        "Load all PLG layers into this piano roll (colour-coded).",
+    )
+    form.addInputCheckbox("Hi-Hats", True)
+    form.addInputCheckbox("Sub 808", True)
+    form.addInputCheckbox("Melody / Lead", True)
+    form.addInputCheckbox("Clear piano roll first", True)
+    return form
+
+
+def apply(form):
+    if not os.path.isfile(BRIDGE_PATH):
+        flp.Utils.ShowMessage("PLG: create a beat first.\nMissing " + BRIDGE_PATH)
+        return
+    with open(BRIDGE_PATH, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    if form.getInputValue("Clear piano roll first"):
+        flp.score.clearNotes()
+
+    tracks = data.get("tracks", {})
+    wanted = {
+        "hi_hats": bool(form.getInputValue("Hi-Hats")),
+        "sub_808": bool(form.getInputValue("Sub 808")),
+        "melody_lead": bool(form.getInputValue("Melody / Lead")),
+    }
+
+    placed = 0
+    for key, _label, color in LAYERS:
+        if not wanted.get(key):
+            continue
+        for entry in tracks.get(key, []):
+            try:
+                note = flp.Note()
+                note.number = parse_note_name(entry["note"])
+                note.time = _ticks(entry["time_step"])
+                note.length = max(1, _ticks(entry["length"]))
+                vel = 127 if key == "sub_808" else int(entry.get("velocity", 100))
+                note.velocity = max(0.0, min(1.0, vel / 127.0))
+                note.color = color
+                note.selected = False
+                flp.score.addNote(note)
+                placed += 1
+            except (KeyError, ValueError, TypeError):
+                continue
+
+    flp.Utils.log("PLG Import ALL: %d notes" % placed)

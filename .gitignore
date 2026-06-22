@@ -15,9 +15,13 @@ sample_catalog.json
 build_guide.txt
 output_midi/
 output_preview.wav
+PLG_Session.flp
 
 # Logs
 *.log
+
+# Per-user quota (subscription period)
+beat_quota.json
 
 # User library (audio + midi + presets + projects + plugins)
 PLG_Library/

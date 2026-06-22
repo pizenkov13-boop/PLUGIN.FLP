@@ -1,0 +1,61 @@
+"""PLG 808 Glide — add slide / portamento to 808 notes.
+
+Select the 808 notes you want to glide between, then run this. Slide +
+portamento give the classic pitched-808 glide. (FL's scripting API can only
+turn these flags ON, which is exactly what this does.)
+
+Tip: enable "Stretch to next note" to butt each note up against the following
+one so the glide actually has somewhere to slide to.
+"""
+
+from __future__ import annotations
+
+import flpianoroll as flp
+
+
+def createDialog():
+    form = flp.ScriptDialog(
+        "PLG 808 Glide",
+        "Add slide/portamento glide to selected 808 notes.",
+    )
+    form.addInputCheckbox("Slide", True)
+    form.addInputCheckbox("Portamento", True)
+    form.addInputCheckbox("Stretch to next note", True)
+    form.addInputCheckbox("Only selected notes", True)
+    return form
+
+
+def _target_indices(only_selected):
+    indices = []
+    for i in range(flp.score.noteCount):
+        note = flp.score.getNote(i)
+        if (not only_selected) or note.selected:
+            indices.append(i)
+    return indices
+
+
+def apply(form):
+    do_slide = bool(form.getInputValue("Slide"))
+    do_porta = bool(form.getInputValue("Portamento"))
+    do_stretch = bool(form.getInputValue("Stretch to next note"))
+    only_selected = bool(form.getInputValue("Only selected notes"))
+
+    targets = _target_indices(only_selected)
+    if not targets:
+        flp.Utils.ShowMessage("PLG 808 Glide: select some 808 notes first.")
+        return
+
+    if do_stretch and len(targets) > 1:
+        ordered = sorted(targets, key=lambda i: flp.score.getNote(i).time)
+        for a, b in zip(ordered, ordered[1:]):
+            note = flp.score.getNote(a)
+            nxt = flp.score.getNote(b)
+            if nxt.time > note.time:
+                note.length = nxt.time - note.time
+
+    for i in targets:
+        note = flp.score.getNote(i)
+        if do_slide:
+            note.slide = True
+        if do_porta:
+            note.porta = True

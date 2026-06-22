@@ -1,0 +1,81 @@
+"""PLG Hat Roll — subdivide notes into rolls with a velocity ramp.
+
+Select some hi-hat (or any) notes, run from Piano roll -> Scripts -> PLG ->
+PLG Hat Roll. Each note is chopped into evenly spaced rolls. The velocity ramp
+fades the roll out (negative) or builds it up (positive) for that trap feel.
+"""
+
+from __future__ import annotations
+
+import flpianoroll as flp
+
+DIVISIONS = ["1/4", "1/8", "1/16", "1/32", "1/8 triplet", "1/16 triplet"]
+# fraction of a quarter note (beat) per roll step
+DIV_FACTOR = {
+    "1/4": 1.0,
+    "1/8": 0.5,
+    "1/16": 0.25,
+    "1/32": 0.125,
+    "1/8 triplet": 1.0 / 3.0,
+    "1/16 triplet": 1.0 / 6.0,
+}
+
+
+def createDialog():
+    form = flp.ScriptDialog(
+        "PLG Hat Roll",
+        "Chop selected notes into rolls. Velocity ramp: - fades out, + builds up.",
+    )
+    form.addInputCombo("Division", DIVISIONS, 2)
+    form.addInputKnob("Velocity ramp", 0.0, -1.0, 1.0)
+    form.addInputCheckbox("Only selected notes", True)
+    return form
+
+
+def _resolve_combo(value, options):
+    return options[value] if isinstance(value, int) else value
+
+
+def _target_indices(only_selected):
+    indices = []
+    for i in range(flp.score.noteCount):
+        note = flp.score.getNote(i)
+        if (not only_selected) or note.selected:
+            indices.append(i)
+    return indices
+
+
+def apply(form):
+    division = _resolve_combo(form.getInputValue("Division"), DIVISIONS)
+    factor = DIV_FACTOR.get(division, 0.25)
+    step = max(1, int(round(flp.score.PPQ * factor)))
+    ramp = float(form.getInputValue("Velocity ramp"))
+    only_selected = bool(form.getInputValue("Only selected notes"))
+
+    targets = _target_indices(only_selected)
+    if not targets:
+        flp.Utils.ShowMessage("PLG Hat Roll: select some notes first.")
+        return
+
+    snapshot = []
+    for i in targets:
+        n = flp.score.getNote(i)
+        snapshot.append((n.number, n.time, n.length, n.velocity, n.pan, n.color, n.group))
+
+    for i in sorted(targets, reverse=True):
+        flp.score.deleteNote(i)
+
+    for number, time, length, velocity, pan, color, group in snapshot:
+        count = max(1, int(round(length / step)))
+        for k in range(count):
+            t = (k / (count - 1)) if count > 1 else 0.0
+            sub = flp.Note()
+            sub.number = number
+            sub.time = time + k * step
+            sub.length = max(1, step - 1)
+            sub.velocity = max(0.05, min(1.0, velocity + ramp * (t - 0.5)))
+            sub.pan = pan
+            sub.color = color
+            sub.group = group
+            sub.selected = True
+            flp.score.addNote(sub)
