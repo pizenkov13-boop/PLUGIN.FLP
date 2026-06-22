@@ -16,7 +16,24 @@ build_guide.txt
 output_midi/
 output_preview.wav
 
-# User samples (keep folder structure, ignore audio files)
+# Logs
+*.log
+
+# User library (audio + midi + presets + projects + plugins)
+PLG_Library/
+PLG_Library/**/*.wav
+PLG_Library/**/*.mp3
+PLG_Library/**/*.ogg
+PLG_Library/**/*.flac
+PLG_Library/**/*.aif
+PLG_Library/**/*.aiff
+PLG_Library/**/*.mid
+PLG_Library/**/*.midi
+PLG_Library/**/*.flp
+PLG_Library/**/*.fst
+PLG_Library/**/*.fxp
+PLG_Library/**/*.dll
+PLG_Library/**/*.vst3
 PLG_Sounds/**/*.wav
 PLG_Sounds/**/*.mp3
 PLG_Sounds/**/*.ogg

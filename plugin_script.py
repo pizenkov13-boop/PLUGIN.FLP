@@ -48,8 +48,12 @@ def parse_note_name(note_str: str) -> int:
     return octave * 12 + NOTE_INDEX[pitch]
 
 
+def step_to_beats(time_step: float) -> float:
+    return float(time_step)
+
+
 def step_to_ticks(time_step: float) -> int:
-    return int(round(float(time_step) * (flp.score.PPQ / 4.0)))
+    return int(round(step_to_beats(time_step) * flp.score.PPQ))
 
 
 def load_bridge_data() -> dict:

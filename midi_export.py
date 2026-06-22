@@ -8,15 +8,22 @@ from typing import Any
 
 from midiutil import MIDIFile
 
-from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
+from pattern_utils import TRACK_KEYS, parse_note_name, step_to_beats, track_notes
 
 PROJECT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_DIR / "output_midi"
 DEFAULT_JSON = PROJECT_DIR / "output_pattern.json"
+COMBINED_MIDI = OUTPUT_DIR / "PLG_Beat.mid"
+
+TRACK_EXPORT_NAMES = {
+    "hi_hats": "PLG Hi-Hats",
+    "sub_808": "PLG Sub 808",
+    "melody_lead": "PLG Melody",
+}
 
 
 def _steps_to_beats(steps: float) -> float:
-    return float(steps) / 4.0
+    return step_to_beats(steps)
 
 
 def export_track(
@@ -58,6 +65,31 @@ def export_pattern_to_midi(
     return written
 
 
+def export_combined_midi(
+    data: dict[str, Any],
+    output_path: Path = COMBINED_MIDI,
+) -> Path:
+    """Single multi-track MIDI for FL Studio import."""
+    tracks = [(key, track_notes(data, key)) for key in TRACK_KEYS if track_notes(data, key)]
+    if not tracks:
+        raise ValueError("No MIDI notes to export.")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    bpm = float(data.get("bpm", 120))
+    midi = MIDIFile(len(tracks))
+
+    for track_index, (track_key, notes) in enumerate(tracks):
+        midi.addTrackName(track_index, 0, TRACK_EXPORT_NAMES.get(track_key, track_key))
+        midi.addTempo(track_index, 0, bpm)
+        export_track(midi, track_index, notes, track_index)
+
+    with output_path.open("wb") as handle:
+        midi.writeFile(handle)
+    return output_path
+
+
 def export_from_json(json_path: Path = DEFAULT_JSON, output_dir: Path = OUTPUT_DIR) -> list[Path]:
     data = json.loads(json_path.read_text(encoding="utf-8"))
-    return export_pattern_to_midi(data, output_dir)
+    written = export_pattern_to_midi(data, output_dir)
+    export_combined_midi(data, output_dir / "PLG_Beat.mid")
+    return written

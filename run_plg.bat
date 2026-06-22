@@ -1,3 +1,8 @@
 @echo off
 cd /d "%~dp0"
-python plg_app.py
+pythonw "%~dp0PLG.pyw" 2>nul
+if errorlevel 1 (
+  echo PLG could not start. Trying with console for error details...
+  python "%~dp0plg_app.py"
+  pause
+)

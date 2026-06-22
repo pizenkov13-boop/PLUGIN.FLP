@@ -10,7 +10,7 @@ from typing import Any
 from pydub import AudioSegment
 from pydub.generators import Sine
 
-from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
+from pattern_utils import TRACK_KEYS, parse_note_name, step_to_beats, step_to_ms, track_notes
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_JSON = PROJECT_DIR / "output_pattern.json"
@@ -25,11 +25,6 @@ TRACK_SAMPLE_DIRS = {
 }
 
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".ogg", ".flac", ".aif", ".aiff"}
-
-
-def step_to_ms(time_step: float, bpm: float) -> int:
-    beats = float(time_step) / 4.0
-    return int(beats * (60_000.0 / bpm))
 
 
 def note_length_ms(length_step: float, bpm: float) -> int:

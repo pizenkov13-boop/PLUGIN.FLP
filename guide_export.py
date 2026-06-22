@@ -26,7 +26,6 @@ def export_build_guide(
         "Files:",
         f"  - {PROJECT_DIR / 'output_pattern.json'}",
         f"  - {PROJECT_DIR / 'output_midi'}/*.mid",
-        f"  - {PROJECT_DIR / 'output_preview.wav'} (after preview render)",
         "",
     ]
 
@@ -50,6 +49,14 @@ def export_build_guide(
         lines.extend(["", "Sample placements:"])
         for item in samples:
             lines.append(f"  - [{item.get('track')}] {item.get('file')} @ {item.get('time_step')}")
+
+    refs = data.get("library_refs") or []
+    if refs:
+        lines.extend(["", "Library refs (MIDI / presets / projects / plugins):"])
+        for item in refs:
+            lines.append(f"  - [{item.get('type')}] {item.get('file')}")
+            if item.get("note"):
+                lines.append(f"      {item['note']}")
 
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return output_path

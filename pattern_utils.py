@@ -17,6 +17,15 @@ TRACK_LABELS = {
 }
 
 
+def step_to_beats(time_step: float) -> float:
+    """PLG grid: 1.0 time_step = one beat (0.25 = sixteenth)."""
+    return float(time_step)
+
+
+def step_to_ms(time_step: float, bpm: float) -> int:
+    return int(step_to_beats(time_step) * (60_000.0 / bpm))
+
+
 def parse_note_name(note_str: str) -> int:
     text = note_str.strip()
     if len(text) >= 3 and text[1] in "#b":
@@ -67,6 +76,12 @@ def format_build_guide(data: dict[str, Any]) -> str:
         elif layer == "vocal_fx" and data.get("vocal_fx"):
             lines.append(f"{step}. Record vocals + apply vocal FX")
             step += 1
+
+    refs = data.get("library_refs") or []
+    if refs:
+        lines.extend(["", "Library assets:"])
+        for item in refs:
+            lines.append(f"- [{item.get('type')}] {item.get('file')} — {item.get('note', '')}".rstrip(" —"))
 
     manual = data.get("manual_steps") or []
     if manual:

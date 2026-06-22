@@ -16,19 +16,18 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
-from sample_catalog import format_catalog_for_prompt, save_catalog, scan_samples_directory
+from library_paths import ALL_LIBRARY_FOLDERS, DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
+from llm_client import generate_pattern as llm_generate_pattern, provider_label
+from sample_catalog import format_catalog_for_prompt, save_catalog, scan_library, scan_samples_directory
 
-MODEL = "gemini-2.5-flash"
 PROJECT_DIR = Path(__file__).resolve().parent
 OUTPUT_FILE = PROJECT_DIR / "output_pattern.json"
 CATALOG_FILE = PROJECT_DIR / "sample_catalog.json"
 ENV_FILE = PROJECT_DIR / ".env"
 USER_PROFILE_FILE = PROJECT_DIR / "user_profile.json"
-DEFAULT_SAMPLES_DIR = PROJECT_DIR / "PLG_Sounds"
-SAMPLE_SUBDIRS = ("808", "hats", "textures", "melodies", "fx", "vocal_presets", "kits")
+DEFAULT_SAMPLES_DIR = DEFAULT_LIBRARY_DIR
+SAMPLE_SUBDIRS = ALL_LIBRARY_FOLDERS
 
 NOTE_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -118,6 +117,21 @@ RESPONSE_JSON_SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {"type": "string"},
         },
+        "library_refs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["type", "file"],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["midi", "preset", "project", "bank", "plugin"],
+                    },
+                    "file": {"type": "string"},
+                    "note": {"type": "string"},
+                },
+            },
+        },
     },
 }
 
@@ -127,17 +141,29 @@ SYSTEM_INSTRUCTION_BASE = """\
 Порядок сборки (build_order) — всегда указывай массив шагов, например:
 ["hi_hats", "sub_808", "melody_lead", "samples", "fx_automation", "vocal_fx"]
 
-tracks — три MIDI-дорожки:
-1) hi_hats — ритм, rolls, time_step 0.25
-2) sub_808 — бас по root notes, velocity 127
+tracks — три MIDI-дорожки (time_step: 1.0 = один удар/бит, 0.25 = шестнадцатая, 4.0 = один такт):
+1) hi_hats — ритм, rolls, шаг 0.25–0.5
+2) sub_808 — бас по root notes, velocity 127, длина ~4.0 на такт
 3) melody_lead — мелодия/аккорды под стиль промпта
 
-Если передан sample catalog — выбирай РЕАЛЬНЫЕ файлы из списка:
-- samples[]: file (relative path), track, time_step, optional note/velocity
-- в notes можно добавить поле "sample" для привязки wav к ноте
-- 808 из папки 808/, textures/noise/buzz из textures/, hats из hats/
+Если передан LIBRARY CATALOG — используй все типы ассетов:
 
-FX — при dist/opium/ken carson:
+AUDIO (wav/mp3) — основной звук:
+- samples[]: file, track, time_step, optional note/velocity
+- в notes можно поле "sample" для привязки wav к ноте
+- 808/, hats/, kits/, textures/, melodies/, fx/, splice/
+
+MIDI (.mid) — library_refs type=midi: референс-мелодия или идея ритма; manual_steps как импортировать в FL.
+
+PRESETS (.fst .fxp) — library_refs type=preset: на какой канал загрузить (808, lead, vocal).
+
+PROJECTS (.flp) — library_refs type=project: открыть как референс/шаблон, не перезаписывать.
+
+BANKS (.sf2) — library_refs type=bank: Fruity Soundfont или sampler.
+
+PLUGINS (.dll .vst3) — library_refs type=plugin: только manual_steps «установи вручную», PLG не ставит плагины.
+
+FX встроенные FL — при dist/opium/ken carson:
 Channel_Precomputed boost=0.30, Fruity_Fast_Dist drive=0.90 mix=1.0, Fruity_WaveShaper boost=0.40
 
 vocal_fx — если промпт про вокал/autotune/weeknd/travis (НЕ AI-голос, только FX на голос юзера):
@@ -166,31 +192,32 @@ def load_environment() -> None:
         load_dotenv()
 
 
-def get_api_key() -> str:
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise EnvironmentError(f"Создайте {ENV_FILE} с GEMINI_API_KEY=...")
-    return api_key
-
-
 def resolve_samples_dir(cli_path: str | None) -> Path:
-    raw = cli_path or os.environ.get("PLG_SAMPLES_DIR") or str(DEFAULT_SAMPLES_DIR)
-    return Path(raw).expanduser().resolve()
+    raw = cli_path or os.environ.get("PLG_SAMPLES_DIR") or os.environ.get("PLG_LIBRARY_DIR")
+    if raw:
+        return Path(raw).expanduser().resolve()
+    if DEFAULT_LIBRARY_DIR.is_dir():
+        return DEFAULT_LIBRARY_DIR.resolve()
+    if LEGACY_LIBRARY_DIR.is_dir():
+        return LEGACY_LIBRARY_DIR.resolve()
+    return DEFAULT_LIBRARY_DIR.resolve()
 
 
-def ensure_samples_library(samples_dir: Path) -> None:
+def ensure_samples_library(samples_dir: Path, *, quiet: bool = False) -> None:
     """Create user sample folder layout on first run."""
     samples_dir.mkdir(parents=True, exist_ok=True)
     for name in SAMPLE_SUBDIRS:
         (samples_dir / name).mkdir(exist_ok=True)
 
+    if quiet:
+        return
+
     print("")
-    print("PLG Sample Library")
+    print("PLG Library (FL Mafia / Splice / your packs)")
     print(f"  Folder: {samples_dir}")
-    print("  Drop kits here:")
-    print("    808/  hats/  textures/  melodies/  kits/  fx/  vocal_presets/")
-    print("  FL Mafia, Splice, own packs — any .wav/.mp3 works.")
-    print("  Set another path in .env -> PLG_SAMPLES_DIR=...")
+    print("  Drop downloads into subfolders or run: python organize_kit.py <folder>")
+    print("  Audio: 808/ hats/ kits/ melodies/ textures/ fx/ splice/")
+    print("  Also: midi/ presets/ projects/ banks/ plugins/")
     print("")
 
 
@@ -210,9 +237,9 @@ def build_system_instruction(profile: dict[str, str], catalog: dict | None) -> s
     parts = [SYSTEM_INSTRUCTION_BASE, "", "FL user profile:"]
     parts.append(json.dumps(profile, ensure_ascii=False))
     if catalog and catalog.get("total", 0) > 0:
-        parts.extend(["", "SAMPLE CATALOG:", format_catalog_for_prompt(catalog)])
+        parts.extend(["", "LIBRARY CATALOG:", format_catalog_for_prompt(catalog)])
     else:
-        parts.append("\nSample catalog empty — use MIDI notes only, samples[] can be omitted.")
+        parts.append("\nLibrary empty — use MIDI notes only; samples[] and library_refs can be omitted.")
     return "\n".join(parts)
 
 
@@ -233,38 +260,15 @@ def count_track_notes(data: dict[str, Any]) -> int:
     return 0
 
 
-def generate_pattern(
-    client: genai.Client,
-    prompt: str,
-    system_instruction: str,
-) -> dict[str, Any]:
-    logging.info("Gemini (%s)...", MODEL)
-
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            response_mime_type="application/json",
-            response_json_schema=RESPONSE_JSON_SCHEMA,
-            temperature=0.85,
-        ),
-    )
-
-    raw_text = response.text
-    if not raw_text or not raw_text.strip():
-        raise RuntimeError("Gemini вернул пустой ответ.")
-
-    data = json.loads(raw_text)
-    if not isinstance(data, dict) or "tracks" not in data:
-        raise RuntimeError("Ожидался JSON с bpm, tracks, build_order.")
-
+def generate_pattern(prompt: str, system_instruction: str) -> dict[str, Any]:
+    data = llm_generate_pattern(prompt, system_instruction, RESPONSE_JSON_SCHEMA)
     logging.info(
-        "BPM=%s | style=%s | notes=%s | samples=%s | fx=%s | vocal=%s",
+        "BPM=%s | style=%s | notes=%s | samples=%s | refs=%s | fx=%s | vocal=%s",
         data.get("bpm"),
         data.get("style", "n/a"),
         count_track_notes(data),
         len(data.get("samples") or []),
+        len(data.get("library_refs") or []),
         "yes" if data.get("fx_automation") else "no",
         "yes" if data.get("vocal_fx") else "no",
     )
@@ -285,40 +289,33 @@ def run_pipeline(
     """Main generation pipeline for CLI and GUI."""
     load_environment()
     resolved_samples = resolve_samples_dir(str(samples_dir) if samples_dir else None)
-    ensure_samples_library(resolved_samples)
+    ensure_samples_library(resolved_samples, quiet=True)
 
-    catalog = scan_samples_directory(resolved_samples)
+    catalog = scan_library(resolved_samples)
     save_catalog(catalog, CATALOG_FILE)
-    logging.info("Catalog: %s files", catalog["total"])
+    logging.info("Library: %s assets (%s audio)", catalog["total"], catalog.get("audio_total", 0))
 
-    if catalog["total"] == 0:
-        logging.warning("Sample folder empty — MIDI-only mode until kits are added")
+    if catalog.get("audio_total", 0) == 0:
+        logging.warning("No audio in library — MIDI-only mode until kits are added")
 
     profile = load_user_profile()
     system_instruction = build_system_instruction(profile, catalog)
-    client = genai.Client(api_key=get_api_key())
-    pattern = generate_pattern(client, prompt, system_instruction)
+    logging.info("LLM provider: %s", provider_label())
+    pattern = generate_pattern(prompt, system_instruction)
     pattern["sample_library"] = catalog["root"]
     save_pattern(pattern)
 
     if export_midi:
-        from midi_export import export_pattern_to_midi
+        from midi_export import export_combined_midi, export_pattern_to_midi
 
         paths = export_pattern_to_midi(pattern)
-        logging.info("MIDI exported: %s files -> output_midi/", len(paths))
+        combined = export_combined_midi(pattern)
+        logging.info("MIDI exported: %s files + %s", len(paths), combined.name)
 
     from guide_export import export_build_guide
 
     export_build_guide(pattern)
     logging.info("Build guide -> build_guide.txt")
-
-    try:
-        from preview_wav import render_preview
-
-        preview = render_preview(pattern, resolved_samples)
-        logging.info("Preview WAV -> %s", preview)
-    except Exception as exc:
-        logging.warning("Preview WAV skipped: %s", exc)
 
     return pattern
 
@@ -350,9 +347,9 @@ def main() -> int:
         samples_dir = resolve_samples_dir(args.samples_dir)
         ensure_samples_library(samples_dir)
 
-        catalog = scan_samples_directory(samples_dir)
+        catalog = scan_library(samples_dir)
         save_catalog(catalog, CATALOG_FILE)
-        logging.info("Catalog: %s files -> %s", catalog["total"], CATALOG_FILE)
+        logging.info("Library: %s assets -> %s", catalog["total"], CATALOG_FILE)
 
         if args.scan_only:
             return 0
