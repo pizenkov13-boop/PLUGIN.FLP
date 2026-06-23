@@ -6,10 +6,10 @@ import hashlib
 import logging
 import math
 import random
-import re
 from copy import deepcopy
 from typing import Any
 
+from music_theory import detect_root_pc, key_label, snap_pc_to_scale
 from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
 
 logger = logging.getLogger("plg.humanize")
@@ -397,6 +397,38 @@ def phase_align_kick_808(
     return sorted(out, key=_note_step)
 
 
+def align_808_to_key(
+    bass_notes: list[dict[str, Any]],
+    melody_notes: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Rule 18 — lock the 808 to the melody's key.
+
+    Transposes the whole 808 line by the nearest interval (-6..+5 semitones)
+    mapping its detected root onto the melody root, so the sub never clashes
+    with the chords. No-op when the keys already agree or melody is empty.
+    """
+    if not bass_notes or not melody_notes:
+        return bass_notes
+    mel_root = detect_root_pc(melody_notes)
+    bass_root = detect_root_pc(bass_notes)
+    delta = (mel_root - bass_root) % 12
+    if delta > 6:
+        delta -= 12
+    if delta == 0:
+        return bass_notes
+    out: list[dict[str, Any]] = []
+    for entry in bass_notes:
+        note = deepcopy(entry)
+        try:
+            midi = parse_note_name(str(note.get("note", "C2")))
+            note["note"] = _midi_to_name(midi + delta)
+            note["key_matched"] = True
+        except ValueError:
+            pass
+        out.append(note)
+    return out
+
+
 def apply_drop_tension(
     pattern: dict[str, Any],
     *,
@@ -444,16 +476,28 @@ def duplicate_snare_layer(
     return layer
 
 
-def darken_melody_intervals(notes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Nudge major thirds down to minor where obvious (simple heuristic)."""
+def darken_melody_intervals(
+    notes: list[dict[str, Any]],
+    *,
+    scale: str = "natural_minor",
+) -> list[dict[str, Any]]:
+    """Rule 11 — snap melody into a dark, key-aware scale (minor / phrygian).
+
+    Detects the melody's own root, then quantizes every note to the nearest
+    in-scale tone (ties resolve downward for darkness). Replaces the old blind
+    'flatten every E and B' rule, which corrupted any key that wasn't C-ish.
+    """
+    if not notes:
+        return []
+    root = detect_root_pc(notes)
     out: list[dict[str, Any]] = []
     for entry in notes:
         note = deepcopy(entry)
         try:
             midi = parse_note_name(str(note.get("note", "A4")))
-            pitch_class = midi % 12
-            if pitch_class in (4, 11):  # E/B in major-ish contexts → flatten
-                note["note"] = _midi_to_name(midi - 1)
+            snapped = snap_pc_to_scale(midi, root, scale)
+            if snapped != midi:
+                note["note"] = _midi_to_name(snapped)
         except ValueError:
             pass
         out.append(note)
@@ -607,6 +651,7 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     # --- 808 mono + slides + phase + attack flatten ---
     bass = track_notes(data, "sub_808")
     if bass:
+        bass = align_808_to_key(bass, track_notes(data, "melody_lead"))
         bass = mono_legato_bass(bass)
         if flags["opium"] or not flags["pop_dance"]:
             bass = add_808_bar_slides(bass)
@@ -623,7 +668,9 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     melody = track_notes(data, "melody_lead")
     if melody:
         if flags["opium"] or flags["phonk"]:
-            melody = darken_melody_intervals(melody)
+            scale = "phrygian" if flags["opium"] else "natural_minor"
+            melody = darken_melody_intervals(melody, scale=scale)
+            data["plg_key"] = key_label(detect_root_pc(melody), scale)
         melody = apply_mono_stereo_drop(melody)
         counter = add_counter_melody_offbeat(melody, kick, rng)
         if counter:
@@ -646,6 +693,8 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         "mono_stereo_drop_bars": PITCH_BEND_PHRASE_BARS,
         "pre_snare_shift_ms": PRE_SNARE_SHIFT_MS,
         "hat_db_down": HAT_DB_DOWN,
+        "key": data.get("plg_key"),
+        "key_matched_808": True,
     }
     data["plg_producer_meta"] = meta
 
@@ -656,6 +705,8 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     steps.append("808 attack +12 ms soften — kick wins transient.")
     steps.append("Pitch bend: -2 st dip every 8 bars on melody (see pitch_bend_automation).")
     steps.append("Mono→stereo drop: narrow verse melody, wide at phrase drop.")
+    if data.get("plg_key"):
+        steps.append(f"Key lock: melody + 808 snapped to {data['plg_key']}.")
     data["manual_steps"] = steps[:14]
 
     logger.info("Producer brain applied (opium=%s)", flags["opium"])

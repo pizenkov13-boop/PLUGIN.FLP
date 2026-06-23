@@ -1,11 +1,13 @@
 import random
 
 from beat_humanize import (
+    align_808_to_key,
     apply_open_hat_choke,
     apply_pre_snare_shift,
     apply_six_db_hat_rule,
     apply_velocity_sine_curve,
     build_pitch_bend_automation,
+    darken_melody_intervals,
     humanize_pattern,
     ms_to_beats,
 )
@@ -57,6 +59,31 @@ def test_pitch_bend_automation_every_8_bars():
     events = build_pitch_bend_automation(pattern)
     assert events
     assert any(e["value"] == 0 for e in events)
+
+
+def test_darken_snaps_major_third_to_minor():
+    # Melody clearly rooted on A; the C# major third must darken to C.
+    notes = [
+        {"time_step": 0.0, "note": "A4", "length": 4.0, "velocity": 120},
+        {"time_step": 1.0, "note": "C#5", "length": 0.5, "velocity": 100},
+    ]
+    out = darken_melody_intervals(notes, scale="natural_minor")
+    names = [n["note"] for n in out]
+    assert names[0] == "A4"
+    assert "C#5" not in names
+
+
+def test_align_808_matches_melody_key():
+    bass = [{"time_step": 0.0, "note": "C2", "length": 2.0, "velocity": 127}]
+    melody = [{"time_step": 0.0, "note": "A4", "length": 4.0, "velocity": 120}]
+    out = align_808_to_key(bass, melody)
+    assert out[0]["note"] == "A1"  # C2 -> nearest A is down 3 semitones
+    assert out[0]["key_matched"] is True
+
+
+def test_align_808_noop_without_melody():
+    bass = [{"time_step": 0.0, "note": "C2", "length": 2.0, "velocity": 127}]
+    assert align_808_to_key(bass, []) == bass
 
 
 def test_humanize_pitch_bend_meta():

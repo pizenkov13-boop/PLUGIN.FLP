@@ -99,6 +99,23 @@ def _tokens(*texts: str) -> set[str]:
     return found
 
 
+# Rule 16 — Perfect Pair: kick character follows the chosen 808.
+_LONG_808_HINTS = ("long", "distort", "dist", "reese", "growl", "sub", "deep", "boom", "sustain")
+_SHORT_808_HINTS = ("short", "punch", "tight", "click", "clean", "stab", "pluck")
+_PUNCHY_KICK = ("click", "punch", "tight", "hard", "clean", "short", "knock")
+_FAT_KICK = ("fat", "boom", "deep", "sub", "round", "long", "808", "thump")
+
+
+def partner_kick_keywords(eight08_name: str) -> tuple[str, ...]:
+    """A long/distorted sub wants a short punchy click kick, and vice versa."""
+    name = _normalize(eight08_name)
+    if any(h in name for h in _SHORT_808_HINTS):
+        return _FAT_KICK
+    if any(h in name for h in _LONG_808_HINTS):
+        return _PUNCHY_KICK
+    return _PUNCHY_KICK  # opium default: long distorted 808 → tight click kick
+
+
 def score_candidate(
     rel_path: str,
     track: str,
@@ -106,6 +123,7 @@ def score_candidate(
     prompt_tokens: set[str],
     style_tokens: set[str],
     prompt_raw: str,
+    bonus_keywords: tuple[str, ...] = (),
 ) -> int:
     profile = TRACK_PROFILES[track]
     norm_name = _normalize(Path(rel_path).name)
@@ -143,6 +161,12 @@ def score_candidate(
         if word in norm_name:
             score += 20
 
+    for keyword in bonus_keywords:
+        if keyword in norm_name:
+            score += 22
+        elif keyword in norm_path:
+            score += 10
+
     return score
 
 
@@ -177,6 +201,7 @@ def pick_best_for_track(
     prompt: str = "",
     style: str = "",
     exclude: set[str] | None = None,
+    bonus_keywords: tuple[str, ...] = (),
 ) -> tuple[Path | None, int]:
     prompt_tokens = _tokens(prompt)
     style_tokens = _tokens(style)
@@ -197,6 +222,7 @@ def pick_best_for_track(
             prompt_tokens=prompt_tokens,
             style_tokens=style_tokens,
             prompt_raw=prompt,
+            bonus_keywords=bonus_keywords,
         )
         profile = TRACK_PROFILES[track]
         folder = rel.split("/")[0].lower() if "/" in rel else ""

@@ -1,4 +1,29 @@
-from sample_match import pick_full_kit, score_candidate
+from sample_match import partner_kick_keywords, pick_full_kit, score_candidate
+
+
+def test_partner_kick_long_808_wants_punchy():
+    kws = partner_kick_keywords("Reese_long_distorted_808.wav")
+    assert "click" in kws or "punch" in kws
+
+
+def test_partner_kick_short_808_wants_fat():
+    kws = partner_kick_keywords("short_punch_808_tight.wav")
+    assert "fat" in kws or "boom" in kws
+
+
+def test_bonus_keywords_boost_score():
+    base = score_candidate(
+        "kits/kick_clean.wav", "kick", prompt_tokens=set(), style_tokens=set(), prompt_raw=""
+    )
+    boosted = score_candidate(
+        "kits/kick_clean.wav",
+        "kick",
+        prompt_tokens=set(),
+        style_tokens=set(),
+        prompt_raw="",
+        bonus_keywords=("clean",),
+    )
+    assert boosted > base
 
 
 def test_808_prefers_prompt_match_over_alphabetical(tmp_path):

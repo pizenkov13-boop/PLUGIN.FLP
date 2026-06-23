@@ -69,13 +69,17 @@ def pick_with_variety(
     style: str = "",
 ) -> dict[str, tuple[Any, int]]:
     """Wrapper around pick_full_kit that penalizes last generation's files."""
-    from sample_match import KIT_TRACK_ORDER, pick_best_for_track
+    from sample_match import KIT_TRACK_ORDER, partner_kick_keywords, pick_best_for_track
 
     last_paths = last_kit_paths()
     used: set[str] = set()
     kit: dict[str, tuple[Any, int]] = {}
 
     for track in KIT_TRACK_ORDER:
+        # Rule 16 — Perfect Pair: bias the kick toward the chosen 808's partner.
+        bonus: tuple[str, ...] = ()
+        if track == "kick" and "sub_808" in kit:
+            bonus = partner_kick_keywords(Path(kit["sub_808"][0]).name)
         # First pass: strict block on last kit
         path, score = pick_best_for_track(
             catalog,
@@ -84,6 +88,7 @@ def pick_with_variety(
             prompt=prompt,
             style=style,
             exclude=used | last_paths,
+            bonus_keywords=bonus,
         )
         # Second pass: allow last kit only if nothing else fits
         if path is None:
@@ -94,6 +99,7 @@ def pick_with_variety(
                 prompt=prompt,
                 style=style,
                 exclude=used,
+                bonus_keywords=bonus,
             )
             if path is not None and str(path.resolve()) in last_paths:
                 score -= 40
