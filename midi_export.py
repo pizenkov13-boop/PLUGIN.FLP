@@ -67,7 +67,8 @@ def _export_pitch_bends(
             continue
         when = _steps_to_beats(float(event.get("time_step", 0)))
         value = int(event.get("value", 8192))
-        midi.addPitchWheelEvent(track_index, when, channel, max(0, min(16383, value)))
+        # MIDIUtil signature is (track, channel, time, value) — channel before time.
+        midi.addPitchWheelEvent(track_index, channel, when, max(0, min(16383, value)))
 
 
 def export_pattern_to_midi(
