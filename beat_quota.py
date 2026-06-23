@@ -154,5 +154,4 @@ def format_quota_label(snap: dict | None = None) -> str:
     if snap.get("skipped"):
         return ""
     days = snap["days_until_reset"]
-    day_word = "day" if days == 1 else "days"
-    return f"{snap['remaining']}/{snap['limit']} beats · reset in {days} {day_word}"
+    return f"{snap['remaining']}/{snap['limit']} beats · resets in {days}d"

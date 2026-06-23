@@ -24,6 +24,11 @@ asset_files = [
     if (root / "assets" / name).is_file()
 ]
 
+font_files = [
+    (str(path), "assets/fonts")
+    for path in (root / "assets" / "fonts").glob("*.ttf")
+]
+
 root_data_files = [
     "plugin_script.py",
     "FL_WORKFLOWS.md",
@@ -34,7 +39,7 @@ root_data_files = [
     ".env.example",
 ]
 
-datas = starter_files + asset_files + [
+datas = starter_files + asset_files + font_files + [
     (str(root / name), ".")
     for name in root_data_files
     if (root / name).is_file()

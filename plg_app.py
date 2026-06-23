@@ -31,30 +31,60 @@ from logo_loader import load_logo_photo
 from stem_split import StemSplitError, split_stems, stems_available
 from starter_kit import ensure_starter_kit
 from theme_install import install_themes
+from organize_kit import organize_library
 from plg_theme import (
     ACCENT,
     BG,
     BG_CARD,
-    BG_ELEVATED,
     BG_INPUT,
-    BORDER,
-    BORDER_FOCUS,
-    DANGER,
+    BUTTON_GAP,
+    BUTTON_H,
+    CARD_GAP,
+    CARD_PAD,
+    CONTENT_W,
+    DiagonalSpinner,
+    DIVIDER,
+    ERROR,
+    ERROR_TOP_H,
+    EYEBROW_MB,
+    first_run_banner,
+    FL_DOT_GAP,
+    FL_DOT_SIZE,
+    FONT_ERROR,
+    FONT_INPUT,
+    FONT_SMALL,
+    ghost_link,
+    HEADER_H,
+    HEADER_PAD_RIGHT,
+    LOGO_H,
+    LOGO_PAD_LEFT,
+    REGEN_SIZE,
+    SP_4,
+    SP_8,
+    STATUS_BAR_H,
+    STATUS_PAD,
     SUCCESS,
     TEXT,
     TEXT_DIM,
-    TEXT_MUTED,
-    WARN,
-    accent_bar,
+    TEXT_FAINT,
+    TEXTAREA_H,
+    TEXTAREA_PAD,
+    WaveformStrip,
+    WIN_H,
+    WIN_MIN_H,
+    WIN_MIN_W,
+    WIN_W,
+    WAVEFORM_H,
     apply_theme,
     bind_entry_shortcuts,
     bind_text_shortcuts,
+    eyebrow_label,
+    headline_font,
     make_card,
-    section_label,
-    workflow_step,
+    status_mono_font,
 )
 
-PROMPT_PLACEHOLDER = "opium trap 145 bpm dark melody heavy distorted 808"
+PROMPT_PLACEHOLDER = "trap beat, dark melody, hard 808s..."
 PATTERN_JSON = PROJECT_DIR / "output_pattern.json"
 SESSION_LOG = PROJECT_DIR / "plg_session.log"
 
@@ -102,12 +132,12 @@ class SettingsDialog(tk.Toplevel):
         wrap.pack(fill="both", expand=True)
 
         title = "Welcome to PLG" if self.first_run else "Settings"
-        tk.Label(wrap, text=title, bg=BG, fg=TEXT, font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        tk.Label(wrap, text=title, bg=BG, fg=TEXT, font=headline_font(18)).pack(anchor="w")
         tk.Label(
             wrap,
             text="API keys stay on your PC in .env — not in the cloud.",
             bg=BG,
-            fg=TEXT_MUTED,
+            fg=TEXT_DIM,
             font=("Segoe UI", 9),
         ).pack(anchor="w", pady=(4, 16))
 
@@ -128,7 +158,7 @@ class SettingsDialog(tk.Toplevel):
 
         samples_row = tk.Frame(wrap, bg=BG)
         samples_row.pack(fill="x", pady=(0, 10))
-        tk.Label(samples_row, text="Sample library folder", bg=BG, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
+        tk.Label(samples_row, text="Sample library folder", bg=BG, fg=TEXT_DIM, font=("Segoe UI", 9)).pack(anchor="w")
         entry_row = tk.Frame(samples_row, bg=BG)
         entry_row.pack(fill="x", pady=(4, 0))
         samples_entry = ttk.Entry(entry_row, textvariable=self._samples_dir, width=34)
@@ -151,7 +181,7 @@ class SettingsDialog(tk.Toplevel):
             ttk.Button(btn_row, text="Cancel", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=(8, 0))
 
     def _field(self, parent: tk.Frame, label: str, widget: tk.Widget) -> None:
-        tk.Label(parent, text=label, bg=BG, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
+        tk.Label(parent, text=label, bg=BG, fg=TEXT_DIM, font=("Segoe UI", 9)).pack(anchor="w")
         widget.pack(anchor="w", pady=(4, 10))
 
     def _browse_samples(self) -> None:
@@ -207,8 +237,8 @@ class PlgApp(tk.Tk):
         setup_gui_logging()
         ensure_starter_kit()
         self.title("PLG — PLUGIN.FLP")
-        self.geometry("720x420")
-        self.minsize(640, 380)
+        self.geometry(f"{WIN_W}x{WIN_H}")
+        self.minsize(WIN_MIN_W, WIN_MIN_H)
         self._logo_image: tk.PhotoImage | None = None
         self._busy = False
         self._gen_started_at: float | None = None
@@ -217,11 +247,10 @@ class PlgApp(tk.Tk):
         self._beat_ready = False
         self._last_prompt = ""
         self._placeholder_active = True
-        self._status = tk.StringVar(value="Ready")
-        self._meta = tk.StringVar(value="BPM —  |  Style —")
+        self._first_run_dismissed = False
         self._quota = tk.StringVar(value="")
+        self._fl_bridge_label = tk.StringVar(value="FL Bridge: —")
         self._provider_badge = tk.StringVar(value=provider_label())
-        self._status_tone = "idle"
         self._empty_lib_warned = False
 
         apply_theme(self)
@@ -261,10 +290,10 @@ class PlgApp(tk.Tk):
         self.after(100, self._process_ui_queue)
 
     def _build_menu(self) -> None:
-        menu = tk.Menu(self, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
+        menu = tk.Menu(self, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=DIVIDER, activeforeground=TEXT)
         self.config(menu=menu)
 
-        file_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
+        file_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=DIVIDER, activeforeground=TEXT)
         file_menu.add_command(label="Library", command=self.open_samples)
         file_menu.add_command(label="Import Kit Folder...", command=self.import_kit)
         file_menu.add_separator()
@@ -275,7 +304,7 @@ class PlgApp(tk.Tk):
         file_menu.add_command(label="Exit", command=self.destroy)
         menu.add_cascade(label="File", menu=file_menu)
 
-        tools_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
+        tools_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=DIVIDER, activeforeground=TEXT)
         tools_menu.add_command(label="Settings...", command=self.open_settings)
         tools_menu.add_command(label="Upgrade Starter Sounds (optional)...", command=self.upgrade_starter_sounds)
         tools_menu.add_command(label="Install FL Scripts", command=self.install_fl_scripts)
@@ -284,7 +313,7 @@ class PlgApp(tk.Tk):
         tools_menu.add_command(label="Split Stems from File...", command=self.split_stems_from_file)
         menu.add_cascade(label="Tools", menu=tools_menu)
 
-        help_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=BORDER, activeforeground=TEXT)
+        help_menu = tk.Menu(menu, tearoff=0, bg=BG_CARD, fg=TEXT, activebackground=DIVIDER, activeforeground=TEXT)
         help_menu.add_command(label="Quick Start", command=self.show_quick_start)
         help_menu.add_command(label="Where is everything? (START_HERE)", command=self.open_start_here)
         help_menu.add_command(label="FL Bridge Guide", command=self.open_fl_bridge_doc)
@@ -292,112 +321,244 @@ class PlgApp(tk.Tk):
         menu.add_cascade(label="Help", menu=help_menu)
 
     def _build_ui(self) -> None:
-        accent_bar(self)
-        root = ttk.Frame(self, padding=0)
-        root.pack(fill="both", expand=True)
+        shell = tk.Frame(self, bg=BG)
+        shell.pack(fill="both", expand=True)
 
-        self._build_header(root)
-        self._build_empty_library_banner(root)
-        self._build_setup_strip(root)
-        self._build_workflow(root)
-        self._build_prompt_card(root)
-        self._build_status(root)
+        self._build_status(shell)
+        self._build_header(shell)
+        self._build_main(shell)
 
         self.bind("<Control-Return>", lambda _e: self.on_create())
         self.bind("<Control-KP_Enter>", lambda _e: self.on_create())
 
-    def _build_workflow(self, parent: ttk.Frame) -> None:
-        row = tk.Frame(parent, bg=BG)
-        row.pack(fill="x", padx=24, pady=(0, 10))
-        for index, (num, label) in enumerate((("01", "PROMPT"), ("02", "GENERATE"), ("03", "FL STUDIO")), start=0):
-            step = workflow_step(row, num, label, active=index == 0)
-            step.pack(side="left", padx=(0, 8))
+    def _build_header(self, parent: tk.Frame) -> None:
+        header = tk.Frame(parent, bg=BG, height=HEADER_H)
+        header.pack(side="top", fill="x")
+        header.pack_propagate(False)
 
-    def _build_header(self, parent: ttk.Frame) -> None:
-        header = tk.Frame(parent, bg=BG)
-        self._header_frame = header
-        header.pack(fill="x", padx=24, pady=(20, 6))
+        tk.Frame(header, bg=DIVIDER, height=1).pack(side="bottom", fill="x")
 
-        left = tk.Frame(header, bg=BG)
-        left.pack(side="left", fill="x", expand=True)
+        row = tk.Frame(header, bg=BG)
+        row.pack(fill="both", expand=True, padx=(LOGO_PAD_LEFT, HEADER_PAD_RIGHT))
 
-        brand = tk.Frame(left, bg=BG)
-        brand.pack(anchor="w")
+        logo_cell = tk.Frame(row, bg=BG)
+        logo_cell.pack(side="left", fill="y", pady=(HEADER_H - LOGO_H) // 2)
 
-        self._logo_image = load_logo_photo(self)
+        self._logo_image = load_logo_photo(self, max_height=LOGO_H)
         if self._logo_image is not None:
-            tk.Label(brand, image=self._logo_image, bg=BG, borderwidth=0).pack(side="left", padx=(0, 14))
+            tk.Label(logo_cell, image=self._logo_image, bg=BG, borderwidth=0).pack(anchor="w")
+        else:
+            tk.Label(logo_cell, text="PLG", bg=BG, fg=TEXT, font=headline_font(28)).pack(anchor="w")
 
-        titles = tk.Frame(brand, bg=BG)
-        titles.pack(side="left")
-        tk.Label(titles, text="PLG", bg=BG, fg=TEXT, font=("Segoe UI", 26, "bold")).pack(anchor="w")
+        right = tk.Frame(row, bg=BG)
+        right.pack(side="right", fill="y", pady=SP_8)
+
         tk.Label(
-            titles,
-            text="prompt → beat → your sound",
-            bg=BG,
-            fg=TEXT_MUTED,
-            font=("Segoe UI", 10),
-        ).pack(anchor="w", pady=(0, 0))
-
-        right = tk.Frame(header, bg=BG)
-        right.pack(side="right", anchor="ne")
-
-        badge = tk.Label(
             right,
             textvariable=self._provider_badge,
-            bg=BG_ELEVATED,
-            fg=TEXT_MUTED,
-            font=("Segoe UI", 8),
-            padx=10,
-            pady=4,
-            highlightbackground=BORDER,
+            bg=BG,
+            fg=TEXT_DIM,
+            font=FONT_SMALL,
+        ).pack(anchor="e")
+
+        fl_row = tk.Frame(right, bg=BG)
+        fl_row.pack(anchor="e", pady=(SP_4, 0))
+        self._header_fl_dot = tk.Canvas(fl_row, width=FL_DOT_SIZE, height=FL_DOT_SIZE, bg=BG, highlightthickness=0, bd=0)
+        self._header_fl_dot.pack(side="left")
+        tk.Label(
+            fl_row,
+            textvariable=self._fl_bridge_label,
+            bg=BG,
+            fg=TEXT_DIM,
+            font=FONT_SMALL,
+        ).pack(side="left", padx=(FL_DOT_GAP, 0))
+
+        ghost_link(right, "Settings", self.open_settings, bg=BG).pack(anchor="e", pady=(SP_8, 0))
+
+    def _first_run_message(self) -> str:
+        parts: list[str] = []
+        if not has_api_key():
+            parts.append("Add your Gemini API key to generate beats.")
+        if not is_fl_bridge_ready(PROJECT_DIR):
+            parts.append("Install FL scripts so OPEN IN FL works.")
+        return " ".join(parts)
+
+    def _needs_first_run_banner(self) -> bool:
+        if self._first_run_dismissed:
+            return False
+        return not has_api_key() or not is_fl_bridge_ready(PROJECT_DIR)
+
+    def _refresh_first_run_banner(self) -> None:
+        if not hasattr(self, "_first_run_slot"):
+            return
+        for child in self._first_run_slot.winfo_children():
+            child.destroy()
+        if self._needs_first_run_banner():
+            self._first_run_slot.pack(side="top", fill="x", pady=(0, CARD_GAP))
+            first_run_banner(
+                self._first_run_slot,
+                self._first_run_message(),
+                on_action=self.open_settings,
+                on_dismiss=self._dismiss_first_run,
+            ).pack(fill="x")
+        else:
+            self._first_run_slot.pack_forget()
+
+    def _dismiss_first_run(self) -> None:
+        self._first_run_dismissed = True
+        self._refresh_first_run_banner()
+
+    def _build_main(self, parent: tk.Frame) -> None:
+        outer = tk.Frame(parent, bg=BG)
+        outer.pack(fill="both", expand=True)
+        outer.grid_rowconfigure(0, weight=1)
+        outer.grid_rowconfigure(1, weight=0)
+        outer.grid_rowconfigure(2, weight=1)
+        outer.grid_columnconfigure(0, weight=1)
+
+        center_wrap = tk.Frame(outer, bg=BG)
+        center_wrap.grid(row=1, column=0)
+
+        stack = tk.Frame(center_wrap, bg=BG, width=CONTENT_W)
+        stack.pack(anchor="center")
+
+        self._first_run_slot = tk.Frame(stack, bg=BG, width=CONTENT_W)
+        self._refresh_first_run_banner()
+
+        self._card_shell = tk.Frame(stack, bg=BG, width=CONTENT_W)
+        self._card_shell.pack(side="top", fill="x", pady=(0, CARD_GAP))
+        self._card_shell.pack_propagate(False)
+
+        self._card_error_bar = tk.Frame(self._card_shell, bg=ERROR, height=ERROR_TOP_H)
+
+        self._card_widget = make_card(self._card_shell)
+        self._card_widget.pack(side="top", fill="x")
+
+        inner = tk.Frame(self._card_widget, bg=BG_CARD)
+        inner.pack(fill="x", padx=CARD_PAD, pady=CARD_PAD)
+
+        eyebrow_label(inner, "DESCRIBE YOUR BEAT", bg=BG_CARD).pack(anchor="w", pady=(0, EYEBROW_MB))
+
+        self._textarea_wrap = tk.Frame(
+            inner,
+            bg=BG_INPUT,
+            height=TEXTAREA_H,
+            highlightbackground=DIVIDER,
             highlightthickness=1,
         )
-        badge.pack(anchor="e", pady=(0, 8))
-        ttk.Button(right, text="Settings", style="Ghost.TButton", command=self.open_settings).pack(anchor="e")
+        self._textarea_wrap.pack(side="top", fill="x")
+        self._textarea_wrap.pack_propagate(False)
 
-    def _build_empty_library_banner(self, parent: ttk.Frame) -> None:
-        self._library_banner = tk.Frame(parent, bg="#1a1408", highlightbackground="#4a3a10", highlightthickness=1)
-        inner = tk.Frame(self._library_banner, bg="#1a1408")
-        inner.pack(fill="x", padx=24, pady=10)
+        self.prompt_box = tk.Text(
+            self._textarea_wrap,
+            height=4,
+            bg=BG_INPUT,
+            fg=TEXT_FAINT,
+            insertbackground=ACCENT,
+            relief="flat",
+            highlightthickness=0,
+            font=FONT_INPUT,
+            wrap="word",
+            padx=TEXTAREA_PAD,
+            pady=TEXTAREA_PAD,
+        )
+        self.prompt_box.pack(fill="both", expand=True)
+        self.prompt_box.insert("1.0", PROMPT_PLACEHOLDER)
+        self.prompt_box.bind("<FocusIn>", self._clear_placeholder)
+        self.prompt_box.bind("<FocusOut>", self._restore_placeholder)
+        self.prompt_box.bind("<KeyRelease>", self._on_prompt_changed)
+        bind_text_shortcuts(self.prompt_box, before_edit=self._clear_placeholder)
 
-        text = tk.Frame(inner, bg="#1a1408")
-        text.pack(side="left", fill="x", expand=True)
-
-        tk.Label(
-            text,
-            text="Starter sounds active — PLG loads built-in 808, hats, and melody into FL.",
-            bg="#1a1408",
-            fg=SUCCESS,
-            font=("Segoe UI", 10, "bold"),
-        ).pack(anchor="w")
-        tk.Label(
-            text,
-            text="Import your own kits anytime for a custom sound. Until then you can CREATE BEAT and OPEN IN FL right away.",
-            bg="#1a1408",
-            fg=TEXT_MUTED,
-            font=("Segoe UI", 9),
-            wraplength=520,
+        self._inline_error = tk.Label(
+            inner,
+            text="",
+            bg=BG_CARD,
+            fg=ERROR,
+            font=FONT_ERROR,
+            wraplength=CONTENT_W - CARD_PAD * 4,
             justify="left",
-        ).pack(anchor="w", pady=(4, 0))
-
-        actions = tk.Frame(inner, bg="#1a1408")
-        actions.pack(side="right", padx=(12, 0))
-        ttk.Button(actions, text="Import Kit", style="Ghost.TButton", command=self.import_kit).pack(side="left")
-        ttk.Button(actions, text="Open Library", style="Ghost.TButton", command=self.open_samples).pack(
-            side="left", padx=(8, 0)
         )
 
-    def _refresh_library_banner(self) -> None:
-        if self._library_has_audio():
-            self._library_banner.pack_forget()
-        else:
-            self._library_banner.pack(fill="x", after=self._header_frame)
+        self._button_row = tk.Frame(inner, bg=BG_CARD, height=BUTTON_H)
+        self._button_row.pack(side="top", fill="x", pady=(CARD_GAP, 0))
+        self._button_row.pack_propagate(False)
 
-    def _strip_anchor(self) -> tk.Widget:
-        if self._library_banner.winfo_ismapped():
-            return self._library_banner
-        return self._header_frame
+        btn_inner = tk.Frame(self._button_row, bg=BG_CARD)
+        btn_inner.pack(side="left", fill="y")
+
+        self.create_btn = ttk.Button(
+            btn_inner,
+            text="CREATE BEAT",
+            style="PrimaryDisabled.TButton",
+            command=self.on_create,
+            state="disabled",
+        )
+        self.create_btn.pack(side="left")
+
+        self.fl_btn = ttk.Button(
+            btn_inner,
+            text="OPEN IN FL",
+            style="Secondary.TButton",
+            command=self.open_in_fl_studio,
+            state="disabled",
+        )
+        self.fl_btn.pack(side="left", padx=(BUTTON_GAP, 0))
+
+        self._regen_wrap = tk.Frame(btn_inner, width=REGEN_SIZE, height=BUTTON_H, bg=BG_CARD)
+        self._regen_wrap.pack(side="left", padx=(BUTTON_GAP, 0))
+        self._regen_wrap.pack_propagate(False)
+
+        self.regen_btn = tk.Label(
+            self._regen_wrap,
+            text="↻",
+            bg=BG_CARD,
+            fg=TEXT_FAINT,
+            font=("Segoe UI", 18),
+            cursor="arrow",
+        )
+        self.regen_btn.pack(expand=True)
+        self.regen_btn.bind("<Enter>", lambda _e: self.regen_btn.configure(fg=TEXT) if self._regen_enabled else None)
+        self.regen_btn.bind(
+            "<Leave>",
+            lambda _e: self.regen_btn.configure(fg=TEXT_DIM if self._regen_enabled else TEXT_FAINT),
+        )
+        self.regen_btn.bind("<Button-1>", lambda _e: self.on_regenerate() if self._regen_enabled and not self._busy else None)
+        self._regen_enabled = False
+
+        self._spinner = DiagonalSpinner(btn_inner, bg=BG_CARD)
+        self._spinner.pack_forget()
+
+        self._waveform = WaveformStrip(stack, height=WAVEFORM_H)
+        self._waveform.pack(side="top", fill="x")
+        self._waveform.pack_propagate(False)
+
+    def _build_status(self, parent: tk.Frame) -> None:
+        bar = tk.Frame(parent, bg=BG, height=STATUS_BAR_H, highlightbackground=DIVIDER, highlightthickness=1)
+        bar.pack(side="bottom", fill="x")
+        bar.pack_propagate(False)
+
+        tk.Frame(bar, bg=DIVIDER, height=1).pack(side="top", fill="x")
+
+        inner = tk.Frame(bar, bg=BG)
+        inner.pack(fill="both", expand=True, padx=STATUS_PAD)
+
+        tk.Label(inner, textvariable=self._quota, bg=BG, fg=TEXT_DIM, font=status_mono_font()).pack(
+            side="left", anchor="w"
+        )
+
+        right = tk.Frame(inner, bg=BG)
+        right.pack(side="right")
+
+        self._fl_dot = tk.Canvas(right, width=FL_DOT_SIZE, height=FL_DOT_SIZE, bg=BG, highlightthickness=0, bd=0)
+        self._fl_dot.pack(side="left")
+        tk.Label(
+            right,
+            textvariable=self._fl_bridge_label,
+            bg=BG,
+            fg=TEXT_DIM,
+            font=status_mono_font(),
+        ).pack(side="left", padx=(FL_DOT_GAP, 0))
+        self._draw_fl_dot()
 
     def _confirm_empty_library_create(self) -> bool:
         if self._library_has_audio():
@@ -405,52 +566,7 @@ class PlgApp(tk.Tk):
         if self._empty_lib_warned:
             return True
         self._empty_lib_warned = True
-        messagebox.showinfo(
-            "PLG starter sounds",
-            "Your kit folder is empty — that's OK.\n\n"
-            "PLG loads built-in starter 808, hats, and melody into FL automatically.\n"
-            "Add your own kits anytime via Import Kit or Open Library.",
-        )
         return True
-
-    def _build_setup_strip(self, parent: ttk.Frame) -> None:
-        self._setup_strip = tk.Frame(parent, bg=BG_ELEVATED)
-        self._setup_inner = tk.Frame(self._setup_strip, bg=BG_ELEVATED)
-        self._setup_inner.pack(fill="x", padx=24, pady=(0, 8))
-
-    def _refresh_setup_strip(self) -> None:
-        self._refresh_library_banner()
-        for child in self._setup_inner.winfo_children():
-            child.destroy()
-
-        hints: list[tuple[str, str]] = []
-        if not has_api_key():
-            hints.append(("Add API key for AI generation", self.open_settings))
-        if not self._library_has_audio():
-            hints.append(("Add your kits for custom sound (starter included)", self.import_kit))
-        if not is_fl_bridge_ready(PROJECT_DIR):
-            hints.append(("Install FL scripts", self.install_fl_scripts))
-
-        if not hints:
-            self._setup_strip.pack_forget()
-            return
-
-        self._setup_strip.pack(fill="x", after=self._strip_anchor())
-        for index, (text, command) in enumerate(hints):
-            if index:
-                tk.Label(self._setup_inner, text="·", bg=BG_ELEVATED, fg=TEXT_DIM, font=("Segoe UI", 9)).pack(
-                    side="left", padx=6
-                )
-            link = tk.Label(
-                self._setup_inner,
-                text=text,
-                bg=BG_ELEVATED,
-                fg=WARN,
-                font=("Segoe UI", 9, "underline"),
-                cursor="hand2",
-            )
-            link.pack(side="left")
-            link.bind("<Button-1>", lambda _e, cmd=command: cmd())
 
     def _library_has_audio(self) -> bool:
         try:
@@ -466,107 +582,56 @@ class PlgApp(tk.Tk):
     def _update_action_buttons(self) -> None:
         if self._busy:
             return
-        if self._beat_ready:
-            self.create_btn.configure(style="Accent.TButton")
-            self.fl_btn.configure(state="normal", style="Primary.TButton")
-            self.regen_btn.configure(state="normal")
+        has_prompt = bool(self._prompt_text())
+        if has_prompt:
+            self.create_btn.configure(state="normal", style="Primary.TButton", text="CREATE BEAT")
         else:
-            self.create_btn.configure(style="Primary.TButton")
-            self.fl_btn.configure(state="disabled", style="Accent.TButton")
-            self.regen_btn.configure(state="disabled")
+            self.create_btn.configure(state="disabled", style="PrimaryDisabled.TButton", text="CREATE BEAT")
+        if self._beat_ready:
+            self.fl_btn.configure(state="normal", style="SecondarySuccess.TButton")
+            self.regen_btn.configure(fg=TEXT_DIM, cursor="hand2")
+            self._regen_enabled = True
+        else:
+            self.fl_btn.configure(state="disabled", style="Secondary.TButton")
+            self.regen_btn.configure(fg=TEXT_FAINT, cursor="arrow")
+            self._regen_enabled = False
 
-    def _build_prompt_card(self, parent: ttk.Frame) -> None:
-        outer = tk.Frame(parent, bg=BG)
-        outer.pack(fill="x", padx=24, pady=(8, 12))
+    def _on_prompt_changed(self, _event: tk.Event | None = None) -> None:
+        if not self._busy:
+            self._update_action_buttons()
 
-        card = make_card(outer)
-        card.pack(fill="x")
-        inner = tk.Frame(card, bg=BG_CARD)
-        inner.pack(fill="x", padx=20, pady=18)
+    def _clear_card_error(self) -> None:
+        self._card_error_bar.pack_forget()
+        self._inline_error.pack_forget()
+        self._inline_error.configure(text="")
 
-        section_label(inner, "DESCRIBE YOUR BEAT", bg=BG_CARD).pack(anchor="w")
+    def _set_card_error(self, message: str) -> None:
+        self._card_error_bar.pack(side="top", fill="x", before=self._card_widget)
+        self._inline_error.configure(text=message)
+        self._inline_error.pack(anchor="w", pady=(SP_8, 0), before=self._button_row)
 
-        self.prompt_box = tk.Text(
-            inner,
-            height=5,
-            bg=BG_INPUT,
-            fg=TEXT_MUTED,
-            insertbackground=ACCENT,
-            relief="flat",
-            highlightthickness=1,
-            highlightbackground=BORDER,
-            highlightcolor=BORDER_FOCUS,
-            font=("Segoe UI", 12),
-            wrap="word",
-            padx=14,
-            pady=12,
-        )
-        self.prompt_box.pack(fill="x", pady=(10, 14))
-        self.prompt_box.insert("1.0", PROMPT_PLACEHOLDER)
-        self.prompt_box.bind("<FocusIn>", self._clear_placeholder)
-        self.prompt_box.bind("<FocusOut>", self._restore_placeholder)
-        bind_text_shortcuts(self.prompt_box, before_edit=self._clear_placeholder)
+    def _draw_fl_dot(self) -> None:
+        ready = is_fl_bridge_ready(PROJECT_DIR)
+        fill = SUCCESS if ready else ERROR
+        label = "FL Bridge: Connected" if ready else "FL Bridge: Not connected"
+        self._fl_bridge_label.set(label)
+        for dot in (getattr(self, "_fl_dot", None), getattr(self, "_header_fl_dot", None)):
+            if dot is None:
+                continue
+            dot.delete("all")
+            dot.create_oval(0, 0, FL_DOT_SIZE, FL_DOT_SIZE, fill=fill, outline=fill)
 
-        action_row = tk.Frame(inner, bg=BG_CARD)
-        action_row.pack(fill="x")
+    def _show_busy_spinner(self) -> None:
+        self._regen_wrap.pack_forget()
+        self._spinner.pack(side="left", padx=(BUTTON_GAP, 0))
+        self._spinner.start()
+        self._waveform.set_busy(True)
 
-        self.create_btn = ttk.Button(
-            action_row,
-            text="CREATE BEAT",
-            style="Primary.TButton",
-            command=self.on_create,
-        )
-        self.create_btn.pack(side="left")
-
-        self.fl_btn = ttk.Button(
-            action_row,
-            text="OPEN IN FL",
-            style="Accent.TButton",
-            command=self.open_in_fl_studio,
-        )
-        self.fl_btn.pack(side="left", padx=(10, 0))
-
-        self.regen_btn = ttk.Button(
-            action_row,
-            text="↻",
-            style="Ghost.TButton",
-            width=3,
-            command=self.on_regenerate,
-        )
-        self.regen_btn.pack(side="left", padx=(8, 0))
-        self.regen_btn.configure(state="disabled")
-
-        self.progress = ttk.Progressbar(action_row, mode="indeterminate", length=160)
-        self.progress.pack(side="left", padx=(16, 0))
-        self.progress.pack_forget()
-
-    def _build_status(self, parent: ttk.Frame) -> None:
-        bar = tk.Frame(parent, bg=BG_ELEVATED, height=40)
-        bar.pack(fill="x", side="bottom")
-        bar.pack_propagate(False)
-
-        left = tk.Frame(bar, bg=BG_ELEVATED)
-        left.pack(side="left", padx=16, pady=10)
-
-        self._status_dot = tk.Canvas(left, width=8, height=8, bg=BG_ELEVATED, highlightthickness=0, bd=0)
-        self._status_dot.pack(side="left", padx=(0, 8))
-        self._draw_status_dot("idle")
-
-        tk.Label(left, textvariable=self._status, bg=BG_ELEVATED, fg=TEXT, font=("Segoe UI", 9)).pack(side="left")
-
-        tk.Label(bar, textvariable=self._quota, bg=BG_ELEVATED, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(
-            side="right", padx=(0, 4), pady=10
-        )
-        tk.Label(bar, textvariable=self._meta, bg=BG_ELEVATED, fg=TEXT_MUTED, font=("Segoe UI", 9), padx=16).pack(
-            side="right", pady=10
-        )
-
-    def _draw_status_dot(self, tone: str) -> None:
-        colors = {"idle": TEXT_DIM, "busy": WARN, "ok": SUCCESS, "error": DANGER}
-        fill = colors.get(tone, TEXT_DIM)
-        self._status_dot.delete("all")
-        self._status_dot.create_oval(1, 1, 7, 7, fill=fill, outline=fill)
-        self._status_tone = tone
+    def _hide_busy_spinner(self) -> None:
+        self._spinner.stop()
+        self._spinner.pack_forget()
+        self._regen_wrap.pack(side="left", padx=(BUTTON_GAP, 0))
+        self._waveform.set_busy(False)
 
     def _clear_placeholder(self, _event: tk.Event | None = None) -> None:
         if not self._placeholder_active:
@@ -580,7 +645,7 @@ class PlgApp(tk.Tk):
             return
         self._placeholder_active = True
         self.prompt_box.insert("1.0", PROMPT_PLACEHOLDER)
-        self.prompt_box.configure(fg=TEXT_MUTED)
+        self.prompt_box.configure(fg=TEXT_FAINT)
 
     def _prompt_text(self) -> str:
         if self._placeholder_active:
@@ -597,8 +662,10 @@ class PlgApp(tk.Tk):
         ensure_samples_library(get_samples_dir(), quiet=True)
         self._provider_badge.set(provider_label())
         self._sync_beat_state()
-        self._refresh_setup_strip()
+        self._refresh_first_run_banner()
         self._refresh_beat_quota()
+        self._draw_fl_dot()
+        self._update_action_buttons()
         if self._beat_ready:
             self._load_beat_meta()
             if self._library_has_audio():
@@ -625,18 +692,16 @@ class PlgApp(tk.Tk):
     def _refresh_after_settings(self) -> None:
         ensure_samples_library(get_samples_dir(), quiet=True)
         self._provider_badge.set(provider_label())
-        self._refresh_setup_strip()
+        self._refresh_first_run_banner()
         self._refresh_beat_quota()
+        self._draw_fl_dot()
         self.set_status("Settings saved", tone="idle")
 
     def set_status(self, text: str, *, tone: str | None = None) -> None:
-        self._status.set(text)
-        if tone:
-            self._draw_status_dot(tone)
+        logging.debug("PLG status: %s (%s)", text, tone)
 
     def set_meta(self, bpm: str | float = "—", style: str = "—", *, ready: bool = False) -> None:
-        suffix = " · ready for FL" if ready else ""
-        self._meta.set(f"{bpm} BPM · {style}{suffix}")
+        del bpm, style, ready
 
     def open_settings(self) -> None:
         SettingsDialog(self, first_run=False)
@@ -719,7 +784,7 @@ class PlgApp(tk.Tk):
         self._busy = True
         self.create_btn.configure(state="disabled")
         self.fl_btn.configure(state="disabled")
-        self.regen_btn.configure(state="disabled")
+        self._regen_wrap.pack_forget()
         self.set_status("Splitting stems…", tone="busy")
 
         def worker() -> None:
@@ -758,8 +823,10 @@ class PlgApp(tk.Tk):
         messagebox.showerror("PLG Stems", str(exc))
 
     def on_regenerate(self) -> None:
+        if not self._regen_enabled:
+            return
         if not self._last_prompt and not self._prompt_text():
-            messagebox.showwarning("PLG", "Describe your beat first.")
+            self._set_card_error("Describe your beat first.")
             return
         snap = get_quota_snapshot()
         if not snap.get("skipped"):
@@ -790,7 +857,7 @@ class PlgApp(tk.Tk):
         try:
             ensure_can_consume_beat()
         except BeatQuotaExceeded as exc:
-            messagebox.showwarning("PLG", str(exc))
+            self._set_card_error(str(exc))
             self._refresh_beat_quota()
             return
 
@@ -799,17 +866,17 @@ class PlgApp(tk.Tk):
 
         prompt = self._prompt_text()
         if not prompt:
-            messagebox.showwarning("PLG", "Describe your beat first.")
+            self._set_card_error("Describe your beat first.")
             return
 
+        self._clear_card_error()
         self._last_prompt = prompt
         self._busy = True
         self._gen_started_at = time.time()
-        self.create_btn.configure(state="disabled", text="CREATING...")
+        self.create_btn.configure(state="disabled", text="GENERATING…")
         self.fl_btn.configure(state="disabled")
-        self.regen_btn.configure(state="disabled")
-        self.progress.pack(side="left", padx=(16, 0))
-        self.progress.start(12)
+        self.prompt_box.configure(state="disabled", insertofftime=0)
+        self._show_busy_spinner()
         self.set_status(f"Starting · {provider_label()}", tone="busy")
         self._start_gen_tick()
 
@@ -855,8 +922,8 @@ class PlgApp(tk.Tk):
         self._stop_gen_tick()
         self._busy = False
         self.create_btn.configure(state="normal", text="CREATE BEAT")
-        self.progress.stop()
-        self.progress.pack_forget()
+        self.prompt_box.configure(state="normal", insertofftime=300)
+        self._hide_busy_spinner()
         self._sync_beat_state()
 
     def _on_success(self, pattern: dict) -> None:
@@ -869,10 +936,11 @@ class PlgApp(tk.Tk):
         self._beat_ready = True
         bpm = pattern.get("bpm", "—")
         style = pattern.get("style", "unknown")
+        self._clear_card_error()
         self.set_status("Beat ready", tone="ok")
         self.set_meta(bpm, style, ready=True)
         self._update_action_buttons()
-        self._refresh_setup_strip()
+        self._refresh_first_run_banner()
 
         if get_auto_open_fl():
             threading.Thread(target=self._open_fl_worker, daemon=True).start()
@@ -895,12 +963,13 @@ class PlgApp(tk.Tk):
             self.set_status("FL Studio · 3 tracks imported", tone="ok")
         else:
             self.set_status("FL Studio opened", tone="ok")
-        self._refresh_setup_strip()
+        self._draw_fl_dot()
+        self._refresh_first_run_banner()
 
     def _on_error(self, exc: Exception) -> None:
         self._stop_busy()
         self.set_status("Error", tone="error")
-        messagebox.showerror("PLG", format_llm_error(exc))
+        self._set_card_error(format_llm_error(exc))
 
     def open_guide(self) -> None:
         path = PROJECT_DIR / "build_guide.txt"
@@ -913,7 +982,7 @@ class PlgApp(tk.Tk):
         path = get_samples_dir()
         ensure_samples_library(path, quiet=True)
         os.startfile(path)  # type: ignore[attr-defined]
-        self._refresh_setup_strip()
+        self._refresh_first_run_banner()
 
     def import_kit(self) -> None:
         source = filedialog.askdirectory(title="Select FL Mafia / kit download folder")
@@ -932,7 +1001,7 @@ class PlgApp(tk.Tk):
             catalog = scan_library(library)
             save_catalog(catalog, PROJECT_DIR / "sample_catalog.json")
             self._empty_lib_warned = False
-            self._refresh_setup_strip()
+            self._refresh_first_run_banner()
             messagebox.showinfo("PLG", f"Imported {total} files into library.")
         except (OSError, FileNotFoundError) as exc:
             messagebox.showerror("PLG", str(exc))
@@ -961,7 +1030,8 @@ class PlgApp(tk.Tk):
         try:
             installed = install_all(PROJECT_DIR)
             pack = installed.get("script_pack") or []
-            self._refresh_setup_strip()
+            self._draw_fl_dot()
+            self._refresh_first_run_banner()
             messagebox.showinfo(
                 "PLG",
                 f"FL scripts installed.\n\n"
