@@ -190,3 +190,63 @@ def session_slug(data: dict[str, Any]) -> str:
     raw = re.sub(r"[^\w\s-]", "", str(data.get("style", "beat")).lower())
     slug = re.sub(r"\s+", "_", raw.strip())[:28] or "beat"
     return f"PLG_Stems_{bpm}bpm_{slug}"
+
+
+def list_blueprint_steps(data: dict[str, Any]) -> list[dict[str, str]]:
+    """Interactive producer checklist for the web UI."""
+    steps: list[dict[str, str]] = []
+    meta = data.get("plg_producer_meta") if isinstance(data.get("plg_producer_meta"), dict) else {}
+
+    if data.get("plg_filth_mode") or meta.get("master_soft_clip"):
+        steps.append({
+            "id": "filth-master",
+            "text": "Master: Fruity Soft Clipper, Post-Gain +3 dB (Opium loudness).",
+        })
+        steps.append({
+            "id": "filth-808",
+            "text": "808 channel: Blood Overdrive ~15% или Fast Dist drive 88%.",
+        })
+
+    steps.append({
+        "id": "pre-snare",
+        "text": "Clap/Snare уже сдвинуты на 2–5 ms раньше — не квантуй обратно в сетку.",
+    })
+    steps.append({
+        "id": "hat-6db",
+        "text": "6 dB rule: хэты тише клэпа — не поднимай velocity хэтов вручную.",
+    })
+    steps.append({
+        "id": "hat-choke",
+        "text": "Open Hat Choke: закрытый хэт режет хвост открытого (choke group plg_hats).",
+    })
+    steps.append({
+        "id": "808-attack",
+        "text": "808 attack +12 ms — кик бьёт первым, бас подхватывает без щелчка.",
+    })
+    steps.append({
+        "id": "sidechain",
+        "text": "Sidechain 808 ~40% на каждый kick (см. plg_producer_meta.sidechain).",
+    })
+    steps.append({
+        "id": "stems",
+        "text": "Перетащи Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid на отдельные каналы микшера.",
+    })
+
+    for index, line in enumerate(data.get("manual_steps") or []):
+        steps.append({"id": f"manual-{index}", "text": str(line)})
+
+    if data.get("pitch_bend_automation"):
+        steps.append({
+            "id": "pitch-bend",
+            "text": "Pitch bend −2 st каждые 8 тактов на мелодии — уже в Melody.mid.",
+        })
+
+    seen: set[str] = set()
+    unique: list[dict[str, str]] = []
+    for step in steps:
+        key = step["text"]
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(step)
+    return unique[:24]

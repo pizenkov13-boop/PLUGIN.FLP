@@ -507,6 +507,46 @@ def _style_flags(pattern: dict[str, Any]) -> dict[str, bool]:
     }
 
 
+def reprocess_hi_hats(pattern: dict[str, Any], *, chaos_seed: int | None = None) -> dict[str, Any]:
+    """Re-run hat roll + humanize on hi-hats (Chaos Roll button)."""
+    data = deepcopy(pattern)
+    tracks = data.setdefault("tracks", {})
+    if not isinstance(tracks, dict):
+        return data
+
+    hats = track_notes(data, "hi_hats")
+    if not hats:
+        return data
+
+    base = [deepcopy(n) for n in hats if not n.get("hat_roll")]
+    if len(base) < 3:
+        base = [deepcopy(n) for n in hats]
+
+    tracks["hi_hats"] = base
+    rng = random.Random(chaos_seed) if chaos_seed is not None else _rng_for(data)
+
+    from hat_roll_engine import apply_hat_rolling_engine
+
+    data = apply_hat_rolling_engine(data, rng)
+    hats = track_notes(data, "hi_hats")
+    hats = apply_hi_hat_swing(hats, rng)
+    hats = apply_velocity_sine_curve(hats, base=96, amplitude=18)
+    hats = apply_hat_roll_pitch(hats)
+    hats = apply_open_hat_choke(hats)
+    hats = apply_hat_panning(hats, rng)
+
+    snare = track_notes(data, "snare")
+    clap = track_notes(data, "clap")
+    ref = clap or snare
+    if ref:
+        hats = apply_six_db_hat_rule(hats, ref)
+
+    tracks["hi_hats"] = hats
+    data["plg_chaos_rolls"] = int(data.get("plg_chaos_rolls", 0)) + 1
+    data["plg_hat_rolls"] = data.get("plg_hat_rolls", 0)
+    return data
+
+
 def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     """Apply producer-brain post-processing to LLM output."""
     data = deepcopy(pattern)

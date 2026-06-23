@@ -6,7 +6,7 @@ import {
   startBeat,
   startOpenInFl,
 } from "./api";
-import type { BeatResult, JobSnapshot, Status } from "./types";
+import type { ApiResult, BeatResult, JobSnapshot, Status } from "./types";
 import type { View } from "./types/ui";
 import HomeView from "./components/HomeView";
 import SessionView from "./components/SessionView";
@@ -145,6 +145,12 @@ export default function App() {
               onOpenInFl={onOpenInFl}
               onCreate={onCreate}
               canCreate={canCreate}
+              onToolResult={(result) => {
+                setLastBeat(result as unknown as BeatResult);
+                setStatusLine((result as ApiResult).message?.toString() ?? "Updated");
+              }}
+              onToolError={(msg) => setError(msg)}
+              onRefresh={refreshStatus}
             />
           )}
           {view === "settings" && <SettingsView onSaved={refreshStatus} />}

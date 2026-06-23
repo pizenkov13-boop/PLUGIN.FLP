@@ -103,6 +103,21 @@ class Api:
     def reveal_path(self, path: str) -> dict:
         return plg_api.reveal_path(path)
 
+    def chaos_roll(self) -> dict:
+        return plg_api.chaos_roll()
+
+    def flip_beat(self) -> dict:
+        return plg_api.flip_beat()
+
+    def bake_session(self) -> dict:
+        return plg_api.bake_session()
+
+    def set_filth_mode(self, enabled: bool) -> dict:
+        return plg_api.set_filth_mode(enabled)
+
+    def get_producer_blueprint(self) -> dict:
+        return plg_api.get_producer_blueprint()
+
 
 class _QuietHandler(SimpleHTTPRequestHandler):
     """Static handler that doesn't spam the log with every asset request."""

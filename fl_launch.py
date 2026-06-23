@@ -13,7 +13,10 @@ import subprocess
 from pathlib import Path
 
 from pattern_utils import TRACK_KEYS
+from pattern_utils import TRACK_KEYS
 from plg_paths import app_dir
+
+PROJECT_DIR = app_dir()
 PATTERN_JSON = PROJECT_DIR / "output_pattern.json"
 COMBINED_MIDI = PROJECT_DIR / "output_midi" / "PLG_Beat.mid"
 SESSION_FLP = PROJECT_DIR / "PLG_Session.flp"

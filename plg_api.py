@@ -229,6 +229,7 @@ def _read_export_meta() -> dict[str, Any]:
         "stem_files": [Path(str(p)).name for p in stem_files],
         "mix_blueprint": str(blueprint) if blueprint.is_file() else None,
         "sample_chop": chop if isinstance(chop, dict) else None,
+        "filth_mode": bool(_read_pattern_field("plg_filth_mode", False)),
     }
 
 
@@ -276,6 +277,54 @@ def reveal_path(path: str) -> dict[str, Any]:
         return {"ok": True, "path": str(reveal)}
     except OSError as exc:
         return _err(str(exc), "os_error")
+
+
+# ---------------------------------------------------------------------------
+# Producer console (pattern_tools — no LLM, no quota)
+# ---------------------------------------------------------------------------
+def chaos_roll() -> dict[str, Any]:
+    from pattern_tools import PatternError, chaos_roll as _chaos_roll
+
+    try:
+        return _chaos_roll()
+    except PatternError as exc:
+        return _err(str(exc), "no_beat")
+
+
+def flip_beat() -> dict[str, Any]:
+    from pattern_tools import PatternError, flip_beat as _flip_beat
+
+    try:
+        return _flip_beat()
+    except PatternError as exc:
+        return _err(str(exc), "no_beat")
+
+
+def bake_session() -> dict[str, Any]:
+    from pattern_tools import PatternError, bake_session as _bake_session
+
+    try:
+        return _bake_session()
+    except PatternError as exc:
+        return _err(str(exc), "no_beat")
+
+
+def set_filth_mode(enabled: bool) -> dict[str, Any]:
+    from pattern_tools import PatternError, set_filth_mode as _set_filth
+
+    try:
+        return _set_filth(bool(enabled))
+    except PatternError as exc:
+        return _err(str(exc), "no_beat")
+
+
+def get_producer_blueprint() -> dict[str, Any]:
+    from pattern_tools import PatternError, get_producer_blueprint as _blueprint
+
+    try:
+        return _blueprint()
+    except PatternError as exc:
+        return _err(str(exc), "no_beat")
 
 
 # ---------------------------------------------------------------------------
@@ -612,6 +661,11 @@ __all__ = [
     "open_in_fl",
     "install_fl_scripts",
     "reveal_path",
+    "chaos_roll",
+    "flip_beat",
+    "bake_session",
+    "set_filth_mode",
+    "get_producer_blueprint",
     "split_stems_file",
     # actions (async job)
     "start_beat",

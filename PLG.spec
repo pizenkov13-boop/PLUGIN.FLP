@@ -81,6 +81,7 @@ hiddenimports = [
     "drum_defaults",
     "sample_match",
     "build_bundled_sounds",
+    "pattern_tools",
     "plg_webview",
     "plg_api",
 ]

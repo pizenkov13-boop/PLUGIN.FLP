@@ -1,5 +1,7 @@
-import type { BeatResult, Status } from "../types";
+import type { ApiResult, BeatResult, Status } from "../types";
 import { revealPath } from "../api";
+import BlueprintChecklist from "./BlueprintChecklist";
+import ProducerConsole from "./ProducerConsole";
 import "./SessionView.css";
 
 type Props = {
@@ -12,6 +14,9 @@ type Props = {
   onOpenInFl: () => void;
   onCreate: () => void;
   canCreate: boolean;
+  onToolResult: (result: ApiResult) => void;
+  onToolError: (message: string) => void;
+  onRefresh: () => void;
 };
 
 export default function SessionView({
@@ -24,6 +29,9 @@ export default function SessionView({
   onOpenInFl,
   onCreate,
   canCreate,
+  onToolResult,
+  onToolError,
+  onRefresh,
 }: Props) {
   const last = status?.last_prompt?.trim();
   const bpm = lastBeat?.bpm ?? status?.bpm;
@@ -32,10 +40,17 @@ export default function SessionView({
   const stemFiles = lastBeat?.stem_files?.length ? lastBeat.stem_files : status?.stem_files;
   const blueprint = lastBeat?.mix_blueprint ?? status?.mix_blueprint;
   const chop = status?.sample_chop;
+  const filthMode = Boolean(lastBeat?.filth_mode ?? status?.filth_mode);
+  const blueprintKey = stemSession || `${bpm ?? 0}-${style ?? "beat"}`;
 
   async function openPath(path: string | null | undefined) {
     if (!path) return;
     await revealPath(path);
+  }
+
+  function handleToolResult(result: ApiResult) {
+    onToolResult(result);
+    onRefresh();
   }
 
   return (
@@ -114,6 +129,16 @@ export default function SessionView({
             </ul>
           </div>
         )}
+
+        <ProducerConsole
+          beatReady={beatReady}
+          busy={busy}
+          filthMode={filthMode}
+          onUpdated={handleToolResult}
+          onError={onToolError}
+        />
+
+        <BlueprintChecklist beatReady={beatReady} sessionKey={blueprintKey} />
 
         <div className="session__actions">
           <button

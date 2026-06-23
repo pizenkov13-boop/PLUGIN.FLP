@@ -32,6 +32,11 @@ interface PywebviewApi {
   open_in_fl(): Promise<ApiResult>;
   install_fl_scripts(): Promise<ApiResult>;
   reveal_path(path: string): Promise<ApiResult>;
+  chaos_roll(): Promise<ApiResult>;
+  flip_beat(): Promise<ApiResult>;
+  bake_session(): Promise<ApiResult>;
+  set_filth_mode(enabled: boolean): Promise<ApiResult>;
+  get_producer_blueprint(): Promise<ApiResult & { steps?: { id: string; text: string }[] }>;
 }
 
 declare global {
@@ -71,6 +76,11 @@ export const startOpenInFl = () => api().start_open_in_fl();
 export const startStemSplit = (source: string) => api().start_stem_split(source);
 export const installFlScripts = () => api().install_fl_scripts();
 export const revealPath = (path: string) => api().reveal_path(path);
+export const chaosRoll = () => api().chaos_roll();
+export const flipBeat = () => api().flip_beat();
+export const bakeSession = () => api().bake_session();
+export const setFilthMode = (enabled: boolean) => api().set_filth_mode(enabled);
+export const getProducerBlueprint = () => api().get_producer_blueprint();
 
 /**
  * Poll a job until it finishes. `onUpdate` fires on every tick (running too),

@@ -28,6 +28,7 @@ export interface Status {
   stem_files?: string[];
   mix_blueprint?: string | null;
   sample_chop?: { chop_count?: number; pitch_semitones?: number; tempo_ratio?: number };
+  filth_mode?: boolean;
   quota: Quota;
 }
 
@@ -57,6 +58,7 @@ export interface BeatResult {
   stem_session?: string;
   stem_files?: string[];
   mix_blueprint?: string;
+  filth_mode?: boolean;
   quota?: Quota;
 }
 
