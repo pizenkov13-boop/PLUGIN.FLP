@@ -33,7 +33,7 @@ export default function App() {
     const s = await getStatus();
     setStatus(s);
     if (!s.has_api_key) setStatusLine("Добавь API key в настройках");
-    else if (s.beat_ready) setStatusLine("Beat ready — open in FL Studio");
+    else if (s.beat_ready) setStatusLine("Ready — Open in FL Studio");
     else setStatusLine("Ready — опиши бит");
   }
 
@@ -58,7 +58,7 @@ export default function App() {
         setError(final.error ?? "Generation failed.");
         setStatusLine("Error");
       } else {
-        setStatusLine("Beat ready");
+        setStatusLine("Baked — open in FL Studio");
         const result = (final.result ?? { ok: true }) as unknown as BeatResult;
         if (result.ok) setLastBeat(result);
         setView("session");
@@ -161,9 +161,9 @@ export default function App() {
           beatReady={beatReady}
           statusLine={statusLine}
           quotaLabel={quota && !quota.skipped ? quota.label : undefined}
+          canCreate={canCreate}
           onOpenInFl={onOpenInFl}
           onCreate={onCreate}
-          canCreate={canCreate}
         />
       </div>
     </div>

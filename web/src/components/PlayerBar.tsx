@@ -1,5 +1,3 @@
-import WaveformStrip from "./WaveformStrip";
-import { IconPlay } from "./icons";
 import "./PlayerBar.css";
 
 type Props = {
@@ -7,9 +5,9 @@ type Props = {
   beatReady: boolean;
   statusLine: string;
   quotaLabel?: string;
+  canCreate: boolean;
   onOpenInFl: () => void;
   onCreate: () => void;
-  canCreate: boolean;
 };
 
 export default function PlayerBar({
@@ -17,36 +15,36 @@ export default function PlayerBar({
   beatReady,
   statusLine,
   quotaLabel,
+  canCreate,
   onOpenInFl,
   onCreate,
-  canCreate,
 }: Props) {
+  const primaryLabel = busy
+    ? "Working…"
+    : beatReady
+      ? "Open in FL Studio"
+      : canCreate
+        ? "Create beat"
+        : "Describe a beat";
+
+  const primaryAction = beatReady && !busy ? onOpenInFl : canCreate && !busy ? onCreate : undefined;
+
   return (
     <footer className="player">
-      <button
-        type="button"
-        className={`player__play ${busy ? "player__play--busy" : ""}`}
-        onClick={canCreate ? onCreate : beatReady ? onOpenInFl : undefined}
-        disabled={!canCreate && !beatReady}
-        title={canCreate ? "Create beat" : beatReady ? "Open in FL" : "Describe a beat first"}
-      >
-        <IconPlay />
-      </button>
-
       <div className="player__center">
-        <WaveformStrip active={busy} ready={beatReady} />
         <p className={`player__status ${busy ? "player__status--busy" : ""}`}>{statusLine}</p>
+        <p className="player__hint">Слушай и своди в FL Studio — PLG готовит сессию и stems.</p>
       </div>
 
       <div className="player__right">
         {quotaLabel && <span className="player__quota">{quotaLabel}</span>}
         <button
           type="button"
-          className={`player__fl ${beatReady ? "player__fl--ready" : ""}`}
-          onClick={onOpenInFl}
-          disabled={!beatReady || busy}
+          className={`player__fl ${beatReady ? "player__fl--ready" : canCreate ? "player__fl--accent" : ""}`}
+          onClick={primaryAction}
+          disabled={!primaryAction}
         >
-          Open in FL
+          {primaryLabel}
         </button>
       </div>
     </footer>

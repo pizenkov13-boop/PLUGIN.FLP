@@ -411,11 +411,19 @@ def create_beat(prompt: str, on_progress: ProgressCb | None = None) -> dict[str,
         logger.exception("create_beat: pipeline failed")
         return _err(format_llm_error(exc), "llm")
 
-    _emit(on_progress, PHASE_FINALIZING, 0.9, "Finalizing")
+    _emit(on_progress, PHASE_FINALIZING, 0.9, "Baking session · FL")
     try:
         consume_beat()
     except BeatQuotaExceeded:
         pass
+
+    baked: dict[str, Any] = {}
+    try:
+        from pattern_tools import bake_session
+
+        baked = bake_session()
+    except Exception as exc:  # noqa: BLE001 - bake is best-effort after generation
+        logger.warning("Auto-bake after create_beat failed: %s", exc)
 
     _set_last_prompt(prompt)
     logger.info("create_beat ok: bpm=%s style=%s", pattern.get("bpm"), pattern.get("style"))
@@ -428,12 +436,16 @@ def create_beat(prompt: str, on_progress: ProgressCb | None = None) -> dict[str,
         "provider": _provider_label_safe(),
         "auto_open_fl": get_auto_open_fl(),
         "sample_picks": pattern.get("plg_sample_picks") or {},
-        "stem_session": pattern.get("plg_stem_session"),
-        "stem_files": pattern.get("plg_stem_files") or [],
-        "mix_blueprint": str(PROJECT_DIR / "READ_ME_IMBA.txt"),
+        "stem_session": baked.get("stem_session") or pattern.get("plg_stem_session"),
+        "stem_files": baked.get("stem_files")
+        or [Path(p).name for p in (pattern.get("plg_stem_files") or [])],
+        "mix_blueprint": baked.get("mix_blueprint") or str(PROJECT_DIR / "READ_ME_IMBA.txt"),
+        "flp": baked.get("flp"),
+        "filth_mode": bool(baked.get("filth_mode") or pattern.get("plg_filth_mode")),
         "quota": get_quota(),
+        "message": baked.get("message") or "Session baked — open in FL Studio",
     }
-    _emit(on_progress, PHASE_DONE, 1.0, "Beat ready")
+    _emit(on_progress, PHASE_DONE, 1.0, "Open in FL Studio")
     return result
 
 

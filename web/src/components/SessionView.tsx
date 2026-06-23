@@ -143,19 +143,19 @@ export default function SessionView({
         <div className="session__actions">
           <button
             type="button"
-            className={`cta cta--primary ${canCreate ? "cta--ready" : ""}`}
-            onClick={onCreate}
-            disabled={!canCreate}
-          >
-            {busy ? "Генерация…" : "Create beat"}
-          </button>
-          <button
-            type="button"
-            className={`cta cta--ghost ${beatReady ? "cta--ghost-ready" : ""}`}
+            className={`cta cta--primary ${beatReady ? "cta--ready" : ""}`}
             onClick={onOpenInFl}
             disabled={!beatReady || busy}
           >
-            Open in FL
+            {busy ? "…" : "Open in FL Studio"}
+          </button>
+          <button
+            type="button"
+            className={`cta cta--ghost ${canCreate ? "cta--ghost-ready" : ""}`}
+            onClick={onCreate}
+            disabled={!canCreate}
+          >
+            {busy ? "Генерация…" : "New beat"}
           </button>
         </div>
       </div>

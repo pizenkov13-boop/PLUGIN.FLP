@@ -54,7 +54,7 @@ export default function HomeView({
           <p className="hero-banner__eyebrow">AI Beat Studio</p>
           <h1 className="hero-banner__title">Создай бит из промпта</h1>
           <p className="hero-banner__desc">
-            prompt → beat → FL Studio. Опиши звук — получи готовую сессию.
+            prompt → beat → bake → FL Studio. Слушай и доводи микс там, не в браузере.
           </p>
           <div className="hero-banner__stats">
             {quota && !quota.skipped && <span>{quota.label}</span>}
