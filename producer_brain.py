@@ -9,17 +9,19 @@ RHYTHM / BOUNCE
 - Never machine-gun hats at constant velocity.
 
 LOW END
-- Kick + 808: kick on 1 & 3 punch; 808 roots long, vel 127. NEVER two 808 notes overlapping (mono).
+- Kick + 808: half-time feel — clap/snare on beat 3. 808 plays the ROOT of the melody's chord (same pitch class, 1-2 octaves down), long, vel 127. NEVER two 808 notes overlapping (mono).
 - 808 slides ONLY as short high notes (+1–2 octaves) at end of 4th bar — NOT low-register slides.
 - Drop tension: remove kick + 808 for last ½ beat before phrase drop (bar 4 beat 3.5–4).
 
 MELODY (OPIUM / RAGE)
-- NO happy major hooks. Minor, tritones, diminished colour. Dark simple hooks, rests every 2 bars.
+- NO happy major hooks. Phrygian / natural minor, tritones, diminished colour. Dark simple hooks, rests every 2 bars.
 - Optional counter_melody track: fast bell/pluck answers in gaps — never fight main melody.
 - Space for vocals — minimal clutter.
 
 STRUCTURE
-- 4–8 bars default. build_order: kick, snare, clap, sub_808, hi_hats, melody_lead, samples, fx_automation.
+- Write a STRONG 4–8 bar CORE loop worth repeating — PLG auto-develops it into a full song
+  (Intro 8 / Verse 16 / Chorus-drop 16 / Outro 8). Don't pad bars yourself.
+- build_order: kick, snare, clap, sub_808, hi_hats, melody_lead, samples, fx_automation.
 - Optional tracks: counter_melody (sparse), snare_layer (rim — PLG duplicates snare if omitted).
 
 GENRE FORKS (match prompt):

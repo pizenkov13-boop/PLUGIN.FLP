@@ -22,35 +22,44 @@ def _bar_count(pattern: dict[str, Any], *, default: int = 4) -> int:
     return max(default, int(max_step // 4) + 1)
 
 
+# Half-time F1LTHY/Opium feel: clap+snare land on beat 3, kick bounces.
+_KICK_HITS = ((0.0, 115), (0.75, 96), (2.5, 102), (3.5, 92))
+
+
 def _kick_pattern(bars: int) -> list[dict[str, Any]]:
-    notes: list[dict[str, Any]] = []
-    for bar in range(bars):
-        base = bar * 4.0
-        notes.append({"time_step": base + 0.0, "note": "C1", "length": 0.45, "velocity": 112})
-        notes.append({"time_step": base + 2.0, "note": "C1", "length": 0.45, "velocity": 108})
-    return notes
+    return [
+        {"time_step": bar * 4.0 + t, "note": "C1", "length": 0.45, "velocity": v}
+        for bar in range(bars)
+        for t, v in _KICK_HITS
+    ]
 
 
 def _snare_pattern(bars: int) -> list[dict[str, Any]]:
-    notes: list[dict[str, Any]] = []
-    for bar in range(bars):
-        base = bar * 4.0
-        notes.append({"time_step": base + 1.0, "note": "D1", "length": 0.35, "velocity": 108})
-        notes.append({"time_step": base + 3.0, "note": "D1", "length": 0.35, "velocity": 104})
-    return notes
+    # Half-time backbeat: one strong hit on beat 3.
+    return [
+        {"time_step": bar * 4.0 + 2.0, "note": "D1", "length": 0.35, "velocity": 110}
+        for bar in range(bars)
+    ]
 
 
 def _clap_pattern(bars: int) -> list[dict[str, Any]]:
-    notes: list[dict[str, Any]] = []
-    for bar in range(bars):
-        base = bar * 4.0
-        notes.append({"time_step": base + 1.0, "note": "E1", "length": 0.25, "velocity": 92})
-        notes.append({"time_step": base + 3.0, "note": "E1", "length": 0.25, "velocity": 88})
-    return notes
+    return [
+        {"time_step": bar * 4.0 + 2.0, "note": "E1", "length": 0.25, "velocity": 102}
+        for bar in range(bars)
+    ]
+
+
+def _hat_pattern(bars: int) -> list[dict[str, Any]]:
+    # Continuous 1/8 drive; hat_roll_engine then carves 1/32 rolls before beat 3.
+    return [
+        {"time_step": bar * 4.0 + step * 0.5, "note": "C5", "length": 0.2, "velocity": 94}
+        for bar in range(bars)
+        for step in range(8)
+    ]
 
 
 def ensure_drum_tracks(pattern: dict[str, Any]) -> None:
-    """Fill kick/snare/clap MIDI if the model returned only hats/808/melody."""
+    """Fill kick/snare/clap/hats MIDI if the model returned only 808/melody."""
     tracks = pattern.setdefault("tracks", {})
     if not isinstance(tracks, dict):
         pattern["tracks"] = tracks = {}
@@ -62,6 +71,8 @@ def ensure_drum_tracks(pattern: dict[str, Any]) -> None:
         tracks["snare"] = _snare_pattern(bars)
     if not tracks.get("clap"):
         tracks["clap"] = _clap_pattern(bars)
+    if not tracks.get("hi_hats"):
+        tracks["hi_hats"] = _hat_pattern(bars)
 
     order = pattern.get("build_order")
     if not isinstance(order, list) or not order:

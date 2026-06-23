@@ -371,6 +371,9 @@ def run_pipeline(
         prompt=prepared["user_prompt"],
         style=str(pattern.get("style", "")),
     )
+    from arranger import arrange_song
+
+    arrange_song(pattern)
     pattern = humanize_pattern(pattern)
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
@@ -445,6 +448,9 @@ def run_pipeline_from_pattern(
         prompt=prepared["user_prompt"],
         style=str(pattern.get("style", "")),
     )
+    from arranger import arrange_song
+
+    arrange_song(pattern)
     pattern = humanize_pattern(pattern)
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
