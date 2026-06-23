@@ -58,7 +58,9 @@ def test_roll_period_resets_monthly():
 
 
 def test_roll_daily_resets_today():
-    yesterday = date.today() - timedelta(days=1)
+    # roll_profile compares against UTC today — use UTC here too so the test
+    # doesn't flake at the local/UTC date boundary.
+    yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
     row = _row(beats_today=3, daily_reset=yesterday)
     rolled = roll_profile(row)
     assert rolled["beats_today"] == 0

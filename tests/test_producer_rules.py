@@ -120,6 +120,21 @@ def test_humanize_filth_max_from_prompt():
     assert meta["master_soft_clip"] is True
 
 
+def test_attack_flatten_pushed_to_15ms():
+    from beat_humanize import ATTACK_FLATTEN_MS
+
+    assert ATTACK_FLATTEN_MS == 15.0
+    pattern = {
+        "bpm": 144, "style": "opium",
+        "tracks": {
+            "kick": [{"time_step": 0.0, "note": "C1", "length": 0.4, "velocity": 110}],
+            "sub_808": [{"time_step": 0.0, "note": "C2", "length": 2.0, "velocity": 127}],
+        },
+    }
+    out = humanize_pattern(pattern)
+    assert out["plg_producer_meta"]["808_attack_ms"] == 15.0
+
+
 def test_normalize_registers_layout():
     from pattern_utils import parse_note_name
 

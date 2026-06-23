@@ -16,12 +16,12 @@ from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
 logger = logging.getLogger("plg.humanize")
 
 BEATS_PER_BAR = 4.0
-PPQ_SWING_MIN = 3 / 96.0
-PPQ_SWING_MAX = 7 / 96.0
+PPQ_SWING_MIN = 6 / 96.0   # dirtier F1LTHY swing — +6..+9 ticks @ PPQ 96
+PPQ_SWING_MAX = 9 / 96.0
 PHASE_DELAY_BEATS = 0.008
 DROP_GAP_START = 3.5
 PRE_SNARE_SHIFT_MS = (2.0, 5.0)
-ATTACK_FLATTEN_MS = 12.0
+ATTACK_FLATTEN_MS = 15.0   # 808 attack pushed so the click-kick punches first
 HAT_DB_DOWN = 6.0  # Rule 25 — hats ~6 dB below clap/snare
 VELOCITY_DB_FACTOR = 10 ** (-HAT_DB_DOWN / 20.0)
 PITCH_BEND_PHRASE_BARS = 8
@@ -772,7 +772,7 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     steps.append("Pre-snare shift: clap/snare 2–5 ms early (Atlanta push).")
     steps.append("6 dB rule: hats ducked under clap/snare velocity.")
     steps.append("Open-hat choke: closed hats cut open tails (choke_group plg_hats).")
-    steps.append("808 attack +12 ms soften — kick wins transient.")
+    steps.append("808 attack +15 ms soften — click-kick punches first, no phase mush.")
     steps.append("Pitch bend: -2 st dip every 8 bars on melody (see pitch_bend_automation).")
     steps.append("Mono→stereo drop: narrow verse melody, wide at phrase drop.")
     if data.get("plg_key"):

@@ -11,7 +11,7 @@ from pattern_utils import track_notes
 BEATS_PER_BAR = 4.0
 ROLL_STEP_32 = 0.125  # 1/32 in PLG beat grid (1.0 = quarter)
 ROLL_STEP_64 = 0.0625
-DEFAULT_ROLL_DEPTH = 0.25  # half-beat burst before snare
+DEFAULT_ROLL_DEPTH = 0.375  # deeper pre-snare burst — more panicked F1LTHY rolls
 HAT_NOTE = "C5"
 
 
@@ -116,7 +116,7 @@ def inject_snare_hat_rolls(
             continue
 
         out = _strip_hats_in_window(out, roll_start, roll_end)
-        use_64 = rng.random() < 0.55 or roll_depth <= 0.2
+        use_64 = rng.random() < 0.7 or roll_depth <= 0.2  # lean into 1/64 vortex
         out.extend(_build_roll_notes(roll_start, roll_end, rng, use_64=use_64))
 
     return sorted(out, key=_note_step)

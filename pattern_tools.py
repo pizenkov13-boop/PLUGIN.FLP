@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import random
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -181,8 +180,8 @@ def set_filth_mode(enabled: bool, pattern: dict[str, Any] | None = None) -> dict
     meta["filth_mode"] = bool(enabled)
     if enabled:
         meta["mix_hints"] = {
-            "master": "Fruity Soft Clipper · Post-Gain +3 dB",
-            "sub_808": "Blood Overdrive ~15% or Fast Dist drive 88%",
+            "master": "Fruity Soft Clipper · Post-Gain +4 dB · Threshold ~ -3 dB",
+            "sub_808": "Fruity Blood Overdrive · Pre-Amp 40% · Color center",
         }
     else:
         meta.pop("mix_hints", None)
@@ -191,7 +190,7 @@ def set_filth_mode(enabled: bool, pattern: dict[str, Any] | None = None) -> dict
     if enabled:
         steps.insert(
             0,
-            "Filth mode ON — Master Soft Clipper +3 dB, 808 Blood Overdrive (set in FL per READ_ME_IMBA).",
+            "Filth mode ON — Master Soft Clipper Post-Gain +4 dB, 808 Blood Overdrive Pre-Amp 40% / Color center (see READ_ME_IMBA).",
         )
     data["manual_steps"] = steps[:16]
 

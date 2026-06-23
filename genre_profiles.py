@@ -102,6 +102,6 @@ def profile_for(style: str = "", prompt: str = "", *, filth_max: bool = False) -
             soft_clip=True,
             drop_tension=True,
             humanize_drum_velocity=False,
-            hat_swing=max(profile.hat_swing, 1.3),
+            hat_swing=max(profile.hat_swing, 1.5),
         )
     return profile
