@@ -9,6 +9,7 @@ import random
 from copy import deepcopy
 from typing import Any
 
+from genre_profiles import profile_for
 from music_theory import detect_root_pc, key_label, snap_pc_to_scale
 from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
 
@@ -260,16 +261,26 @@ def humanize_velocities(
     return out
 
 
-def apply_hi_hat_swing(notes: list[dict[str, Any]], rng: random.Random) -> list[dict[str, Any]]:
-    """Micro-timing: offbeat hats nudged forward/back for bounce."""
+def apply_hi_hat_swing(
+    notes: list[dict[str, Any]],
+    rng: random.Random,
+    *,
+    intensity: float = 1.0,
+) -> list[dict[str, Any]]:
+    """Micro-timing: offbeat hats nudged forward/back for bounce.
+
+    ``intensity`` scales the swing depth per genre (0 = grid-locked, 1 = trap).
+    """
     out: list[dict[str, Any]] = []
+    if intensity <= 0:
+        return [deepcopy(n) for n in sorted(notes, key=_note_step)]
     for index, entry in enumerate(sorted(notes, key=_note_step)):
         note = deepcopy(entry)
         step = _note_step(note)
         beat_in_bar = step % BEATS_PER_BAR
         is_offbeat = abs(beat_in_bar % 0.5 - 0.25) < 0.06 or index % 2 == 1
         if is_offbeat:
-            shift = rng.uniform(PPQ_SWING_MIN, PPQ_SWING_MAX)
+            shift = rng.uniform(PPQ_SWING_MIN, PPQ_SWING_MAX) * intensity
             if index % 4 in (1, 3):
                 shift *= -1
             note["time_step"] = round(step + shift, 5)
@@ -612,6 +623,15 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         logger.info("Producer brain: ambient — light humanize only")
         return data
 
+    style = str(data.get("style", ""))
+    prompt = str(data.get("user_prompt", ""))
+    filth = bool(data.get("plg_filth_mode")) or any(
+        k in f"{style} {prompt}".lower()
+        for k in ("filth", "filthy", "мясо", "max filth", "брутал")
+    )
+    profile = profile_for(style, prompt, filth_max=filth)
+    logger.info("Producer brain: genre=%s filth=%s", profile.name, filth)
+
     # --- Hi-hats ---
     hats = track_notes(data, "hi_hats")
     snare = track_notes(data, "snare")
@@ -619,13 +639,15 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     kick = track_notes(data, "kick")
 
     if hats:
-        from hat_roll_engine import apply_hat_rolling_engine
+        if profile.hat_rolls:
+            from hat_roll_engine import apply_hat_rolling_engine
 
-        data = apply_hat_rolling_engine(data, rng)
-        hats = track_notes(data, "hi_hats")
-        hats = apply_hi_hat_swing(hats, rng)
+            data = apply_hat_rolling_engine(data, rng)
+            hats = track_notes(data, "hi_hats")
+        hats = apply_hi_hat_swing(hats, rng, intensity=profile.hat_swing)
         hats = apply_velocity_sine_curve(hats, base=96, amplitude=18)
-        hats = apply_hat_roll_pitch(hats)
+        if profile.hat_rolls:
+            hats = apply_hat_roll_pitch(hats)
         hats = apply_open_hat_choke(hats)
         hats = apply_hat_panning(hats, rng)
         ref = clap or snare
@@ -638,10 +660,10 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         raw = track_notes(data, key)
         if raw:
             shifted = apply_pre_snare_shift(raw, bpm, rng)
-            if flags["opium"] or flags["phonk"]:
-                tracks[key] = shifted
-            else:
+            if profile.humanize_drum_velocity:
                 tracks[key] = humanize_velocities(shifted, lo=lo, hi=hi, rng=rng)
+            else:
+                tracks[key] = shifted
 
     snare = track_notes(data, "snare")
     if snare:
@@ -650,31 +672,32 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
 
     # --- 808 mono + slides + phase + attack flatten ---
     bass = track_notes(data, "sub_808")
-    if bass:
+    if bass and profile.eight08:
         bass = align_808_to_key(bass, track_notes(data, "melody_lead"))
         bass = mono_legato_bass(bass)
-        if flags["opium"] or not flags["pop_dance"]:
+        if profile.eight08_slides:
             bass = add_808_bar_slides(bass)
         if kick:
             bass = phase_align_kick_808(kick, bass)
         bass = apply_808_attack_flatten(bass, bpm)
         tracks["sub_808"] = bass
 
-    # --- Drop tension (opium / trap) ---
-    if flags["opium"] or flags["phonk"]:
+    # --- Drop tension ---
+    if profile.drop_tension:
         apply_drop_tension(data)
 
     # --- Melody + pitch bend + mono/stereo ---
     melody = track_notes(data, "melody_lead")
     if melody:
-        if flags["opium"] or flags["phonk"]:
-            scale = "phrygian" if flags["opium"] else "natural_minor"
-            melody = darken_melody_intervals(melody, scale=scale)
-            data["plg_key"] = key_label(detect_root_pc(melody), scale)
-        melody = apply_mono_stereo_drop(melody)
-        counter = add_counter_melody_offbeat(melody, kick, rng)
-        if counter:
-            tracks["counter_melody"] = counter
+        if profile.melody_scale:
+            melody = darken_melody_intervals(melody, scale=profile.melody_scale)
+            data["plg_key"] = key_label(detect_root_pc(melody), profile.melody_scale)
+        if profile.stereo_drop:
+            melody = apply_mono_stereo_drop(melody)
+        if profile.counter_melody:
+            counter = add_counter_melody_offbeat(melody, kick, rng)
+            if counter:
+                tracks["counter_melody"] = counter
         tracks["melody_lead"] = melody
 
     pitch_bends = build_pitch_bend_automation(data)
@@ -685,7 +708,7 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     meta = {
         "sidechain": build_sidechain_hints(kick),
         "low_cut_hz": 25,
-        "master_soft_clip": flags["opium"] or flags["phonk"],
+        "master_soft_clip": profile.soft_clip,
         "reverb_duck": {"melody_lead": 0.7},
         "bpm_drift": float(data.get("plg_vibe_drift", 0) or 0),
         "hat_choke_group": "plg_hats",
@@ -694,9 +717,13 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         "pre_snare_shift_ms": PRE_SNARE_SHIFT_MS,
         "hat_db_down": HAT_DB_DOWN,
         "key": data.get("plg_key"),
-        "key_matched_808": True,
+        "key_matched_808": bool(profile.eight08),
+        "genre": profile.name,
+        "filth": round(profile.filth, 2),
+        "filth_max": filth,
     }
     data["plg_producer_meta"] = meta
+    data["plg_genre"] = profile.name
 
     steps = list(data.get("manual_steps") or [])
     steps.append("Pre-snare shift: clap/snare 2–5 ms early (Atlanta push).")
@@ -707,7 +734,8 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     steps.append("Mono→stereo drop: narrow verse melody, wide at phrase drop.")
     if data.get("plg_key"):
         steps.append(f"Key lock: melody + 808 snapped to {data['plg_key']}.")
-    data["manual_steps"] = steps[:14]
+    steps.append(f"Genre profile: {profile.name}" + (" · FILTH MAX" if filth else "") + ".")
+    data["manual_steps"] = steps[:15]
 
     logger.info("Producer brain applied (opium=%s)", flags["opium"])
     return data

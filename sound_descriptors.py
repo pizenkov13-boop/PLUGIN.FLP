@@ -5,75 +5,110 @@ vintage, punchy… in English or Russian — into filename keyword hints, so the
 picker grabs the 808 / kick / melody that actually sounds like the request
 instead of a random file from the dump folder. Hints ride the existing
 ``bonus_keywords`` channel in sample_match, so they stack with Rule 16 pairing.
+
+Each family is track-aware: "glassy" only nudges the melody, "knock" only the
+drums, while broad vibes (dark, opium) apply everywhere. Pass ``track`` to
+``descriptor_hints`` to get only the families relevant to that channel.
 """
 
 from __future__ import annotations
 
-# family -> (prompt triggers EN+RU substrings, filename hint keywords)
-DESCRIPTOR_FAMILIES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+# family -> (prompt triggers EN+RU, filename hint keywords, tracks | () = all)
+DESCRIPTOR_FAMILIES: dict[str, tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = {
     "distorted": (
         ("distort", "dist", "overdrive", "grimy", "gritty", "fuzz", "saturat", "screw",
          "crunch", "dirty", "дист", "искаж", "грязн", "перегруз", "хрип"),
         ("dist", "distort", "drive", "od", "sat", "grime", "grimy", "fuzz", "crush",
          "dirty", "screw", "crunch"),
+        ("sub_808", "kick", "melody_lead"),
     ),
     "dark": (
         ("dark", "evil", "sinister", "gloom", "grim", "doom", "haunt", "creepy",
          "тёмн", "темн", "злой", "мрачн", "жутк"),
         ("dark", "evil", "night", "gloom", "shadow", "grim", "doom", "haunt",
          "creep", "blakk", "black"),
+        (),
     ),
     "hard": (
         ("hard", "aggress", "heavy", "banger", "brutal", "violent",
          "жёстк", "жестк", "агресс", "тяжёл", "тяжел", "мощн"),
         ("hard", "heavy", "aggress", "bang", "war", "brutal", "slam"),
+        ("kick", "snare", "clap", "sub_808"),
     ),
     "clean": (
         ("clean", "pure", "smooth", "polished", "чист", "гладк"),
         ("clean", "pure", "dry", "smooth"),
+        (),
     ),
     "deep": (
         ("deep", "subby", "low end", "boom", "thick", "rumble", "fat",
          "глубок", "низк", "саб", "жирн", "бубн"),
         ("deep", "sub", "low", "boom", "thick", "rumble", "fat"),
+        ("sub_808", "kick"),
     ),
     "punchy": (
         ("punch", "tight", "snappy", "knock", "click", "snap",
          "панч", "чётк", "четк", "хлёст", "хлест"),
         ("punch", "tight", "knock", "snap", "click", "tick", "pop"),
+        ("kick", "snare", "snare_layer", "clap"),
     ),
     "vintage": (
         ("vintage", "lofi", "lo-fi", "retro", "vinyl", "dusty", "tape", "analog",
          "винтаж", "ретро", "пыльн", "плёнк", "пленк", "старый"),
         ("vintage", "lofi", "lo_fi", "retro", "vinyl", "dust", "tape", "analog", "warm"),
+        ("melody_lead",),
     ),
     "bright": (
         ("bright", "glassy", "glass", "crystal", "shiny", "shine", "bell", "airy",
          "светл", "ярк", "стекл", "звонк", "колокол"),
         ("bright", "glass", "crystal", "shine", "bell", "air", "glassy"),
+        ("melody_lead",),
     ),
     "metallic": (
         ("metal", "metallic", "steel", "industrial", "металл", "сталь"),
         ("metal", "steel", "metallic", "industr"),
+        ("melody_lead", "hi_hats"),
     ),
     "trap_opium": (
         ("opium", "rage", "carti", "ken", "carson", "destroy", "lonely", "f1lthy",
-         "pluggnb", "plugg", "playboi"),
+         "pluggnb", "plugg", "playboi", "sexyy", "sigma"),
         ("opium", "rage", "carti", "ken", "plugg"),
+        (),
     ),
     "phonk": (
         ("phonk", "drift", "memphis", "cowbell", "фонк", "дрифт"),
         ("phonk", "drift", "memphis", "cowbell"),
+        (),
+    ),
+    "drill": (
+        ("drill", "дрилл", "uk drill", "ny drill"),
+        ("drill", "slide", "uk", "ny"),
+        ("sub_808", "hi_hats"),
+    ),
+    "jersey": (
+        ("jersey", "club", "джерси", "bed squeak", "bounce"),
+        ("jersey", "club", "bounce", "squeak"),
+        ("kick", "sub_808"),
+    ),
+    "hyperpop": (
+        ("hyperpop", "hyper pop", "гиперпоп", "glitch", "detune", "supersaw"),
+        ("hyper", "glitch", "detune", "supersaw", "saw", "pitch"),
+        ("melody_lead",),
     ),
 }
 
 
-def descriptor_hints(prompt: str = "", style: str = "") -> tuple[str, ...]:
-    """Filename keyword hints for every descriptor family the text triggers."""
+def descriptor_hints(prompt: str = "", style: str = "", track: str | None = None) -> tuple[str, ...]:
+    """Filename keyword hints for the descriptor families the text triggers.
+
+    If ``track`` is given, only families relevant to that channel contribute.
+    """
     text = f"{prompt} {style}".lower()
     hints: list[str] = []
     seen: set[str] = set()
-    for triggers, keywords in DESCRIPTOR_FAMILIES.values():
+    for triggers, keywords, tracks in DESCRIPTOR_FAMILIES.values():
+        if track is not None and tracks and track not in tracks:
+            continue
         if any(trig in text for trig in triggers):
             for keyword in keywords:
                 if keyword not in seen:

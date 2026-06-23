@@ -76,15 +76,13 @@ def pick_with_variety(
     used: set[str] = set()
     kit: dict[str, tuple[Any, int]] = {}
 
-    # Timbre targeting: pull samples whose names match the *character* asked for
-    # (dark / hard / distorted / glassy / vintage…), EN or RU, any genre.
-    desc = descriptor_hints(prompt, style)
-
     for track in KIT_TRACK_ORDER:
-        bonus: tuple[str, ...] = desc
+        # Timbre targeting: pull samples whose names match the *character* asked
+        # for (dark / hard / glassy / vintage…), routed to the right channel.
+        bonus: tuple[str, ...] = descriptor_hints(prompt, style, track=track)
         # Rule 16 — Perfect Pair: bias the kick toward the chosen 808's partner.
         if track == "kick" and "sub_808" in kit:
-            bonus = tuple(dict.fromkeys(partner_kick_keywords(Path(kit["sub_808"][0]).name) + desc))
+            bonus = tuple(dict.fromkeys(partner_kick_keywords(Path(kit["sub_808"][0]).name) + bonus))
         # First pass: strict block on last kit
         path, score = pick_best_for_track(
             catalog,

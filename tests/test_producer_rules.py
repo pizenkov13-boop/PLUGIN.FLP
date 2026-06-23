@@ -86,6 +86,39 @@ def test_align_808_noop_without_melody():
     assert align_808_to_key(bass, []) == bass
 
 
+def test_humanize_kpop_keeps_major_third():
+    pattern = {
+        "bpm": 120,
+        "style": "k-pop",
+        "user_prompt": "bright idol song",
+        "tracks": {
+            "melody_lead": [
+                {"time_step": 0.0, "note": "C5", "length": 4.0, "velocity": 110},
+                {"time_step": 4.0, "note": "E5", "length": 1.0, "velocity": 100},
+            ],
+        },
+    }
+    out = humanize_pattern(pattern)
+    assert out["plg_producer_meta"]["genre"] == "kpop"
+    # C major contains E natural — the major third must NOT be darkened.
+    assert "E5" in [n["note"] for n in out["tracks"]["melody_lead"]]
+
+
+def test_humanize_filth_max_from_prompt():
+    pattern = {
+        "bpm": 150,
+        "style": "trap",
+        "user_prompt": "мясо filthy max",
+        "tracks": {
+            "melody_lead": [{"time_step": 0.0, "note": "A4", "length": 4.0, "velocity": 100}],
+        },
+    }
+    meta = humanize_pattern(pattern)["plg_producer_meta"]
+    assert meta["filth_max"] is True
+    assert meta["filth"] == 1.0
+    assert meta["master_soft_clip"] is True
+
+
 def test_humanize_pitch_bend_meta():
     pattern = {
         "bpm": 145,

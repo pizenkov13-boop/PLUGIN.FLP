@@ -21,3 +21,13 @@ def test_empty_prompt_no_hints():
 def test_vintage_lofi():
     hints = descriptor_hints("винтажный пыльный сэмпл", style="")
     assert "vintage" in hints
+
+
+def test_track_aware_glassy_only_melody():
+    assert "glass" in descriptor_hints("glassy bright", track="melody_lead")
+    assert "glass" not in descriptor_hints("glassy bright", track="kick")
+
+
+def test_track_aware_knock_only_drums():
+    assert "knock" in descriptor_hints("hard knock punchy", track="kick")
+    assert "knock" not in descriptor_hints("hard knock punchy", track="melody_lead")

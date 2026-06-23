@@ -16,6 +16,18 @@ from pattern_utils import NOTE_NAMES, parse_note_name
 SCALES: dict[str, tuple[int, ...]] = {
     "natural_minor": (0, 2, 3, 5, 7, 8, 10),
     "phrygian": (0, 1, 3, 5, 7, 8, 10),
+    "major": (0, 2, 4, 5, 7, 9, 11),
+    "dorian": (0, 2, 3, 5, 7, 9, 10),
+    "lydian": (0, 2, 4, 6, 7, 9, 11),
+    "locrian": (0, 1, 3, 5, 6, 8, 10),
+}
+_SCALE_QUALITY = {
+    "natural_minor": "minor",
+    "phrygian": "phrygian",
+    "major": "major",
+    "dorian": "dorian",
+    "lydian": "lydian",
+    "locrian": "locrian",
 }
 DEFAULT_ROOT_PC = 9  # A — PLG's home key when nothing can be detected
 
@@ -62,5 +74,5 @@ def name_for_midi(midi: int) -> str:
 
 
 def key_label(root_pc: int, scale: str = "natural_minor") -> str:
-    quality = "phrygian" if scale == "phrygian" else "minor"
+    quality = _SCALE_QUALITY.get(scale, "minor")
     return f"{NOTE_NAMES[root_pc % 12]} {quality}"
