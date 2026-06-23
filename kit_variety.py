@@ -76,10 +76,14 @@ def pick_with_variety(
     used: set[str] = set()
     kit: dict[str, tuple[Any, int]] = {}
 
+    from audio_features import target_from_prompt
+
     for track in KIT_TRACK_ORDER:
         # Timbre targeting: pull samples whose names match the *character* asked
         # for (dark / hard / glassy / vintage…), routed to the right channel.
         bonus: tuple[str, ...] = descriptor_hints(prompt, style, track=track)
+        # V2 "hearing": match by the actual sound, even on garbage filenames.
+        audio_target = target_from_prompt(prompt, style, track)
         # Rule 16 — Perfect Pair: bias the kick toward the chosen 808's partner.
         if track == "kick" and "sub_808" in kit:
             bonus = tuple(dict.fromkeys(partner_kick_keywords(Path(kit["sub_808"][0]).name) + bonus))
@@ -92,6 +96,7 @@ def pick_with_variety(
             style=style,
             exclude=used | last_paths,
             bonus_keywords=bonus,
+            audio_target=audio_target,
         )
         # Second pass: allow last kit only if nothing else fits
         if path is None:
@@ -103,6 +108,7 @@ def pick_with_variety(
                 style=style,
                 exclude=used,
                 bonus_keywords=bonus,
+                audio_target=audio_target,
             )
             if path is not None and str(path.resolve()) in last_paths:
                 score -= 40

@@ -202,13 +202,15 @@ def pick_best_for_track(
     style: str = "",
     exclude: set[str] | None = None,
     bonus_keywords: tuple[str, ...] = (),
+    audio_target: dict[str, str] | None = None,
+    audio_top_k: int = 6,
 ) -> tuple[Path | None, int]:
     prompt_tokens = _tokens(prompt)
     style_tokens = _tokens(style)
     blocked = exclude or set()
-    best_rel: str | None = None
-    best_score = -10_000
+    profile = TRACK_PROFILES[track]
 
+    scored: list[tuple[int, Path]] = []
     for rel in iter_track_candidates(catalog, track):
         path = (library_root / rel).resolve()
         if not path.is_file():
@@ -224,21 +226,35 @@ def pick_best_for_track(
             prompt_raw=prompt,
             bonus_keywords=bonus_keywords,
         )
-        profile = TRACK_PROFILES[track]
         folder = rel.split("/")[0].lower() if "/" in rel else ""
         if folder not in profile["folders"] and score < 18:
             continue
-        if score > best_score:
-            best_score = score
-            best_rel = rel
+        scored.append((score, path))
 
-    if best_rel is None or best_score < 5:
+    if not scored:
+        return None, -10_000
+
+    # Stable sort keeps the original candidate order on ties (legacy behaviour).
+    order = sorted(range(len(scored)), key=lambda i: scored[i][0], reverse=True)
+
+    if audio_target:
+        # V2 "hearing": re-rank the top name matches by how they actually sound.
+        import audio_features
+
+        best_score = -10_000
+        best_path: Path | None = None
+        for i in order[:audio_top_k]:
+            name_score, path = scored[i]
+            bonus = audio_features.feature_match_score(audio_features.analyze_cached(path), audio_target)
+            if name_score + bonus > best_score:
+                best_score = name_score + bonus
+                best_path = path
+    else:
+        best_score, best_path = scored[order[0]]
+
+    if best_path is None or best_score < 5:
         return None, best_score
-
-    path = (library_root / best_rel).resolve()
-    if path.is_file():
-        return path, best_score
-    return None, best_score
+    return best_path, best_score
 
 
 def pick_full_kit(
