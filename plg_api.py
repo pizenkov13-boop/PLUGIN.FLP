@@ -62,7 +62,7 @@ from beat_quota import (
 from fl_launch import find_fl_executable, fl_version_label, open_beat_in_fl
 from fl_setup import install_all, is_fl_bridge_ready
 from library_catalog import save_catalog, scan_library as _scan_library
-from llm_client import format_llm_error, get_provider, provider_label
+from llm_client import format_llm_error, provider_label
 from plg_paths import app_dir
 
 try:
@@ -750,6 +750,27 @@ def install_fl_scripts() -> dict[str, Any]:
         "script_pack_count": len(pack),
         "fl_bridge_ready": is_fl_bridge_ready(PROJECT_DIR),
     }
+
+
+# ---------------------------------------------------------------------------
+# Instant preview  (wraps beat_preview.render_preview) — hear it before FL
+# ---------------------------------------------------------------------------
+def render_preview() -> dict[str, Any]:
+    """Render the current beat to audio (data URI) so the UI can play it."""
+    if not PATTERN_JSON.is_file():
+        return _err("Create a beat first.", "not_found")
+    try:
+        pattern = json.loads(PATTERN_JSON.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return _err(str(exc), "io")
+
+    from beat_preview import render_preview as _render
+
+    try:
+        return _render(pattern, PROJECT_DIR / "preview.wav")
+    except Exception as exc:  # rendering must never hard-crash the bridge
+        logging.exception("preview render failed")
+        return _err(str(exc), "preview")
 
 
 # ---------------------------------------------------------------------------

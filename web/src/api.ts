@@ -35,6 +35,7 @@ interface PywebviewApi {
 
   open_in_fl(): Promise<ApiResult>;
   install_fl_scripts(): Promise<ApiResult>;
+  render_preview(): Promise<ApiResult & { audio?: string; seconds?: number; path?: string }>;
   reveal_path(path: string): Promise<ApiResult>;
   chaos_roll(): Promise<ApiResult>;
   flip_beat(): Promise<ApiResult>;
@@ -143,6 +144,7 @@ export const startRegenerate = (prompt?: string | null) => api().start_regenerat
 export const startOpenInFl = () => api().start_open_in_fl();
 export const startStemSplit = (source: string) => api().start_stem_split(source);
 export const installFlScripts = () => api().install_fl_scripts();
+export const renderPreview = () => api().render_preview();
 export const revealPath = (path: string) => api().reveal_path(path);
 export const chaosRoll = () => api().chaos_roll();
 export const flipBeat = () => api().flip_beat();

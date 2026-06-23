@@ -102,6 +102,9 @@ class Api:
     def open_in_fl(self) -> dict:
         return plg_api.open_in_fl()
 
+    def render_preview(self) -> dict:
+        return plg_api.render_preview()
+
     def install_fl_scripts(self) -> dict:
         return plg_api.install_fl_scripts()
 

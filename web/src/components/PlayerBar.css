@@ -84,3 +84,37 @@
 .player__fl--ready:not(:disabled):hover {
   background: rgba(61, 220, 132, 0.22);
 }
+
+.player__preview {
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.player__preview:not(:disabled):hover {
+  border-color: rgba(59, 124, 255, 0.4);
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+}
+
+.player__preview--playing {
+  border-color: rgba(59, 124, 255, 0.4);
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+}
+
+.player__preview:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
