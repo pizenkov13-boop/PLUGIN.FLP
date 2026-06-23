@@ -1,4 +1,4 @@
-"""Shared helpers for notes, build guides, and pattern stats."""
+"""Shared track layout for PLG patterns and FL sessions."""
 
 from __future__ import annotations
 
@@ -9,12 +9,63 @@ NOTE_ALIASES = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#"}
 NOTE_INDEX = {name: idx for idx, name in enumerate(NOTE_NAMES)}
 NOTE_INDEX.update({alias: NOTE_INDEX[mapped] for alias, mapped in NOTE_ALIASES.items()})
 
-TRACK_KEYS = ("hi_hats", "sub_808", "melody_lead")
+# Channel rack order in .flp / MIDI export
+TRACK_KEYS = (
+    "kick",
+    "snare",
+    "snare_layer",
+    "clap",
+    "sub_808",
+    "hi_hats",
+    "melody_lead",
+    "counter_melody",
+)
+DRUM_TRACK_KEYS = ("kick", "snare", "snare_layer", "clap", "sub_808", "hi_hats")
+SAMPLE_TRACK_KEYS = (
+    "kick",
+    "snare",
+    "snare_layer",
+    "clap",
+    "sub_808",
+    "hi_hats",
+    "melody_lead",
+)
+OPTIONAL_TRACK_KEYS = ("snare_layer", "counter_melody")
+
 TRACK_LABELS = {
-    "hi_hats": "1. Hi-Hats",
-    "sub_808": "2. Sub 808",
-    "melody_lead": "3. Melody / Lead",
+    "kick": "1. Kick",
+    "snare": "2. Snare",
+    "snare_layer": "2b. Snare layer",
+    "clap": "3. Clap",
+    "sub_808": "4. Sub 808",
+    "hi_hats": "5. Hi-Hats",
+    "melody_lead": "6. Melody / Lead",
+    "counter_melody": "6b. Counter melody",
 }
+
+CHANNEL_NAMES = {
+    "kick": "PLG Kick",
+    "snare": "PLG Snare",
+    "snare_layer": "PLG Snare Layer",
+    "clap": "PLG Clap",
+    "sub_808": "PLG Sub 808",
+    "hi_hats": "PLG Hi-Hats",
+    "melody_lead": "PLG Melody / Lead",
+    "counter_melody": "PLG Counter Melody",
+}
+
+DEFAULT_BUILD_ORDER = [
+    "kick",
+    "snare",
+    "clap",
+    "sub_808",
+    "hi_hats",
+    "melody_lead",
+    "counter_melody",
+    "samples",
+    "fx_automation",
+    "vocal_fx",
+]
 
 
 def step_to_beats(time_step: float) -> float:
@@ -49,15 +100,20 @@ def parse_note_name(note_str: str) -> int:
 def track_notes(data: dict[str, Any], track_key: str) -> list[dict[str, Any]]:
     tracks = data.get("tracks")
     if isinstance(tracks, dict) and track_key in tracks:
-        return tracks[track_key]
+        raw = tracks[track_key]
+        return raw if isinstance(raw, list) else []
     return []
 
 
+def count_all_track_notes(data: dict[str, Any]) -> int:
+    return sum(len(track_notes(data, key)) for key in TRACK_KEYS)
+
+
 def format_build_guide(data: dict[str, Any]) -> str:
-    order = data.get("build_order") or list(TRACK_KEYS) + ["samples", "fx_automation", "vocal_fx"]
+    order = data.get("build_order") or list(DEFAULT_BUILD_ORDER)
     lines = [
         f"PLG | BPM {data.get('bpm', '?')} | {data.get('style', 'unknown')}",
-        f"Producer mode: Don Toliver / Opium FL workflow",
+        "Producer mode: Don Toliver / Opium FL workflow",
         "",
         "Build order:",
     ]
@@ -78,6 +134,14 @@ def format_build_guide(data: dict[str, Any]) -> str:
             lines.append(f"{step}. Record vocals + apply vocal FX")
             step += 1
 
+    picks = data.get("plg_sample_picks")
+    if isinstance(picks, dict) and picks:
+        lines.extend(["", "Matched kit:"])
+        for key in TRACK_KEYS:
+            name = picks.get(key)
+            if name:
+                lines.append(f"- {TRACK_LABELS.get(key, key)}: {name}")
+
     refs = data.get("library_refs") or []
     if refs:
         lines.extend(["", "Library assets:"])
@@ -95,7 +159,7 @@ def format_build_guide(data: dict[str, Any]) -> str:
             "Swap samples on PLG channels anytime for your sound."
         )
     else:
-        workflow = "Don workflow: drag YOUR 808/hats/lead onto PLG channels → FX on 808 → Mixer F9"
+        workflow = "Don workflow: your kick/snare/clap/808/hats/lead on PLG channels → FX on 808 → Mixer F9"
     lines.extend([
         "",
         workflow,

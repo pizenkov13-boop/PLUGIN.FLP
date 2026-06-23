@@ -17,7 +17,10 @@ DEFAULT_JSON = PROJECT_DIR / "output_pattern.json"
 PREVIEW_FILE = PROJECT_DIR / "output_preview.wav"
 
 TRACK_SAMPLE_DIRS = {
-    "hi_hats": ("hats", "808", "kits"),
+    "kick": ("kits", "808"),
+    "snare": ("kits", "splice"),
+    "clap": ("kits", "splice"),
+    "hi_hats": ("hats", "kits", "splice"),
     "sub_808": ("808", "kits"),
     "melody_lead": ("melodies", "kits"),
     "textures": ("textures", "fx"),
@@ -39,6 +42,20 @@ def find_first_sample(samples_root: Path, folders: tuple[str, ...]) -> Path | No
         for path in sorted(base.rglob("*")):
             if path.suffix.lower() in AUDIO_EXTENSIONS:
                 return path
+    return None
+
+
+def resolve_sample_path(file_ref: str, samples_root: Path) -> Path | None:
+    """Absolute path as-is; relative paths resolved against library root."""
+    raw = (file_ref or "").strip()
+    if not raw:
+        return None
+    direct = Path(raw)
+    if direct.is_file():
+        return direct.resolve()
+    relative = samples_root / raw
+    if relative.is_file():
+        return relative.resolve()
     return None
 
 
@@ -108,11 +125,13 @@ def render_preview(
         rel = item.get("file")
         if not rel:
             continue
-        path = samples_root / rel
-        if not path.is_file():
+        path = resolve_sample_path(str(rel), samples_root)
+        if path is None:
             continue
-        start_ms = step_to_ms(item["time_step"], bpm)
+        start_ms = step_to_ms(float(item.get("time_step", 0)), bpm)
         clip = load_clip(path)
+        length_step = float(item.get("length", 1.0))
+        clip = clip[: note_length_ms(length_step, bpm)]
         mix = mix.overlay(clip, position=start_ms)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

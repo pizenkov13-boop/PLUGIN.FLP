@@ -13,7 +13,10 @@ venv/
 output_pattern.json
 sample_catalog.json
 build_guide.txt
+READ_ME_IMBA.txt
+user_profile.json
 output_midi/
+output_chops/
 output_preview.wav
 output_stems/
 PLG_Session.flp

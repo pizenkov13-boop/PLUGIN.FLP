@@ -13,26 +13,41 @@ from pathlib import Path
 from typing import Any
 
 from library_paths import AUDIO_EXTENSIONS, DEFAULT_LIBRARY_DIR
-from plg_paths import starter_bundle_dir, starter_runtime_dir
+from pattern_utils import CHANNEL_NAMES, SAMPLE_TRACK_KEYS
+from plg_paths import bundled_sounds_dir, starter_bundle_dir, starter_runtime_dir
+from sample_match import KIT_TRACK_ORDER, merge_llm_sample_picks, pick_best_for_track, pick_full_kit
 
 BUNDLE_VERSION = 1
 
 TRACK_STARTER_FILES = {
+    "kick": "PLG_starter_kick.wav",
+    "snare": "PLG_starter_snare.wav",
+    "snare_layer": "PLG_starter_snare.wav",
+    "clap": "PLG_starter_clap.wav",
     "hi_hats": "PLG_starter_hat.wav",
     "sub_808": "PLG_starter_808.wav",
     "melody_lead": "PLG_starter_melody.wav",
 }
 
 TRACK_SEARCH_FOLDERS = {
+    "kick": ("kits", "808"),
+    "snare": ("kits", "splice"),
+    "snare_layer": ("kits", "splice"),
+    "clap": ("kits", "splice"),
     "hi_hats": ("hats", "kits", "splice"),
     "sub_808": ("808", "kits"),
     "melody_lead": ("melodies", "kits", "splice"),
 }
 
-CHANNEL_LABELS = {
-    "hi_hats": "PLG Hi-Hats",
-    "sub_808": "PLG Sub 808",
-    "melody_lead": "PLG Melody / Lead",
+CHANNEL_LABELS = CHANNEL_NAMES
+
+TRACK_VELOCITY = {
+    "kick": 112,
+    "snare": 108,
+    "clap": 92,
+    "sub_808": 127,
+    "hi_hats": 96,
+    "melody_lead": 100,
 }
 
 CC0_SOURCES = {
@@ -110,6 +125,46 @@ def _synth_hat(sample_rate: int = 44100, duration: float = 0.055) -> list[float]
     return out
 
 
+def _synth_kick(sample_rate: int = 44100, duration: float = 0.18) -> list[float]:
+    total = int(sample_rate * duration)
+    out: list[float] = []
+    for i in range(total):
+        t = i / sample_rate
+        click = math.sin(2 * math.pi * 120 * t) * math.exp(-55 * t)
+        body = math.sin(2 * math.pi * 55 * t) * math.exp(-18 * t)
+        out.append(_soft_clip((click * 0.55 + body * 0.85) * 0.9, drive=2.4))
+    return out
+
+
+def _synth_snare(sample_rate: int = 44100, duration: float = 0.22) -> list[float]:
+    import random
+
+    random.seed(909)
+    total = int(sample_rate * duration)
+    out: list[float] = []
+    for i in range(total):
+        t = i / sample_rate
+        noise = random.uniform(-1, 1)
+        tone = math.sin(2 * math.pi * 180 * t) * math.exp(-35 * t)
+        env = math.exp(-16 * t)
+        out.append(_soft_clip((noise * 0.7 + tone * 0.35) * env * 0.75, drive=2.0))
+    return out
+
+
+def _synth_clap(sample_rate: int = 44100, duration: float = 0.16) -> list[float]:
+    import random
+
+    random.seed(707)
+    total = int(sample_rate * duration)
+    out: list[float] = []
+    for i in range(total):
+        t = i / sample_rate
+        burst = random.uniform(-1, 1) if (i % 120) < 40 else random.uniform(-0.4, 0.4)
+        env = math.exp(-28 * t)
+        out.append(_soft_clip(burst * env * 0.55, drive=1.7))
+    return out
+
+
 def _synth_melody_pluck(sample_rate: int = 44100, duration: float = 0.45) -> list[float]:
     total = int(sample_rate * duration)
     freqs = (440.0, 660.0, 880.0)
@@ -145,6 +200,9 @@ def _existing_paths() -> dict[str, Path] | None:
 
 def _seed_from_bundle() -> dict[str, Path] | None:
     """Copy shipped starter wavs into the runtime folder (first run / after install)."""
+    from build_bundled_sounds import ensure_bundled_sounds, pick_bundled_for_track
+
+    ensure_bundled_sounds()
     bundled = starter_bundle_dir()
     runtime = _starter_dir()
     manifest = _manifest_file()
@@ -163,6 +221,17 @@ def _seed_from_bundle() -> dict[str, Path] | None:
             shutil.copy2(src, dest)
             copied = True
 
+    pool = bundled_sounds_dir()
+    if pool.is_dir():
+        for track, filename in TRACK_STARTER_FILES.items():
+            dest = runtime / filename
+            if dest.is_file():
+                continue
+            picked = pick_bundled_for_track(track)
+            if picked and picked.is_file():
+                shutil.copy2(picked, dest)
+                copied = True
+
     if bundled.joinpath("BUNDLED.json").is_file() and not (runtime / "BUNDLED.json").is_file():
         shutil.copy2(bundled / "BUNDLED.json", runtime / "BUNDLED.json")
 
@@ -176,8 +245,14 @@ def _seed_from_bundle() -> dict[str, Path] | None:
 
 
 def _ensure_synthetic_starter() -> dict[str, Path]:
+    from build_bundled_sounds import ensure_bundled_sounds, pick_bundled_for_track
+
+    ensure_bundled_sounds()
     runtime = _starter_dir()
     generators = {
+        "kick": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["kick"], _synth_kick()),
+        "snare": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["snare"], _synth_snare()),
+        "clap": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["clap"], _synth_clap()),
         "hi_hats": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["hi_hats"], _synth_hat()),
         "sub_808": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["sub_808"], _synth_808()),
         "melody_lead": lambda: _write_wav_mono(runtime / TRACK_STARTER_FILES["melody_lead"], _synth_melody_pluck()),
@@ -186,8 +261,12 @@ def _ensure_synthetic_starter() -> dict[str, Path]:
     for track, filename in TRACK_STARTER_FILES.items():
         path = runtime / filename
         if not path.is_file():
-            logging.info("Creating PLG synth starter: %s", path.name)
-            generators[track]()
+            picked = pick_bundled_for_track(track)
+            if picked and picked.is_file():
+                shutil.copy2(picked, path)
+            else:
+                logging.info("Creating PLG synth starter: %s", path.name)
+                generators[track]()
         paths[track] = path.resolve()
     _write_manifest("plg_synth", paths)
     return paths
@@ -299,31 +378,66 @@ def ensure_starter_kit() -> dict[str, Path]:
     return _ensure_synthetic_starter()
 
 
-def _first_audio_in_folders(library_root: Path, folders: tuple[str, ...]) -> Path | None:
+def _collect_audio_in_folders(library_root: Path, folders: tuple[str, ...]) -> list[Path]:
+    paths: list[Path] = []
     for folder in folders:
         base = library_root / folder
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*")):
             if path.suffix.lower() in AUDIO_EXTENSIONS:
-                return path.resolve()
-    return None
+                paths.append(path.resolve())
+    return paths
 
 
 def resolve_track_samples(
     catalog: dict[str, Any] | None,
     *,
     library_root: Path | None = None,
+    prompt: str = "",
+    style: str = "",
 ) -> dict[str, Path]:
     starter = ensure_starter_kit()
     root = Path(library_root or (catalog or {}).get("root") or DEFAULT_LIBRARY_DIR)
     if isinstance(root, str):
         root = Path(root)
 
+    from kit_variety import pick_with_variety
+
     chosen: dict[str, Path] = {}
-    for track, folders in TRACK_SEARCH_FOLDERS.items():
-        user_path = _first_audio_in_folders(root, folders)
-        chosen[track] = user_path if user_path else starter[track]
+    user_audio = int((catalog or {}).get("audio_total", 0) or 0) > 0
+    if catalog and user_audio:
+        kit = pick_with_variety(catalog, root, prompt=prompt, style=style)
+        for track, (path, score) in kit.items():
+            chosen[track] = path
+            logging.info("Matched %s <- %s (score %s)", track, path.name, score)
+
+    for track in KIT_TRACK_ORDER:
+        if track in chosen:
+            continue
+        fallback = _collect_audio_in_folders(root, TRACK_SEARCH_FOLDERS[track])
+        for path in fallback:
+            if path not in chosen.values():
+                chosen[track] = path
+                break
+        if track not in chosen:
+            chosen[track] = starter[track]
+
+    used = {str(p.resolve()) for p in chosen.values()}
+    layer_path, layer_score = pick_best_for_track(
+        catalog or {"audio": {}},
+        "snare_layer",
+        root,
+        prompt=prompt,
+        style=style,
+        exclude=used,
+    ) if catalog else (None, 0)
+    if layer_path is not None:
+        chosen["snare_layer"] = layer_path
+        logging.info("Matched snare_layer <- %s (score %s)", layer_path.name, layer_score)
+    elif "snare" in chosen:
+        chosen["snare_layer"] = chosen["snare"]
+
     return chosen
 
 
@@ -334,7 +448,7 @@ def build_samples_layer(sound_map: dict[str, Path]) -> list[dict[str, Any]]:
             "track": track,
             "time_step": 0.0,
             "note": "C4",
-            "velocity": 127 if track == "sub_808" else 100,
+            "velocity": TRACK_VELOCITY.get(track, 100),
         }
         for track, path in sound_map.items()
     ]
@@ -358,14 +472,56 @@ def attach_sounds_to_pattern(
     catalog: dict[str, Any] | None,
     *,
     library_root: Path | None = None,
+    prompt: str = "",
 ) -> dict[str, Path]:
-    sound_map = resolve_track_samples(catalog, library_root=library_root)
+    if prompt:
+        pattern["user_prompt"] = prompt
+
+    style = str(pattern.get("style") or "")
+    root = Path(library_root or (catalog or {}).get("root") or DEFAULT_LIBRARY_DIR)
+    prompt_text = prompt or str(pattern.get("user_prompt") or "")
+
+    from build_bundled_sounds import ensure_bundled_sounds, pick_bundled_for_track
+
+    ensure_bundled_sounds()
+
+    sound_map = resolve_track_samples(
+        catalog,
+        library_root=root,
+        prompt=prompt_text,
+        style=style,
+    )
+    sound_map = merge_llm_sample_picks(sound_map, pattern.get("samples") or [], root)
+
     user_audio = int((catalog or {}).get("audio_total", 0) or 0) > 0
+    if not user_audio:
+        for track in KIT_TRACK_ORDER:
+            picked = pick_bundled_for_track(track, prompt=prompt_text, style=style)
+            if picked and picked.is_file():
+                sound_map[track] = picked
+        layer_pick = pick_bundled_for_track("snare_layer", prompt=prompt_text, style=style)
+        if layer_pick and layer_pick.is_file():
+            sound_map["snare_layer"] = layer_pick
+        elif "snare" in sound_map:
+            sound_map["snare_layer"] = sound_map["snare"]
+    else:
+        from kit_variety import save_kit_pick
+
+        save_kit_pick(sound_map)
+
     pattern["plg_sound_paths"] = {track: str(path) for track, path in sound_map.items()}
+    pattern["plg_sample_picks"] = {track: path.name for track, path in sound_map.items()}
     pattern["samples"] = build_samples_layer(sound_map)
     pattern["starter_mode"] = not user_audio
+
+    melody_path = sound_map.get("melody_lead")
+    if melody_path and melody_path.is_file():
+        from sample_chop_engine import apply_sample_chop_to_pattern
+
+        apply_sample_chop_to_pattern(pattern, melody_path, prompt=prompt_text)
+
     pattern["manual_steps"] = build_manual_steps(sound_map, used_starter=not user_audio)
-    pattern["sample_library"] = str(library_root or DEFAULT_LIBRARY_DIR)
+    pattern["sample_library"] = str(root)
     return sound_map
 
 

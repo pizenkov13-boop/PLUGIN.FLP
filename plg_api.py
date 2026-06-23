@@ -203,10 +203,40 @@ def get_quota() -> dict[str, Any]:
     return snap
 
 
+def _read_pattern_field(key: str, default: Any = None) -> Any:
+    try:
+        data = json.loads(PATTERN_JSON.read_text(encoding="utf-8"))
+        return data.get(key, default)
+    except (OSError, ValueError, TypeError):
+        return default
+
+
+def _read_sample_picks() -> dict[str, str]:
+    picks = _read_pattern_field("plg_sample_picks")
+    return picks if isinstance(picks, dict) else {}
+
+
+def _read_export_meta() -> dict[str, Any]:
+    blueprint = PROJECT_DIR / "READ_ME_IMBA.txt"
+    stem_files = _read_pattern_field("plg_stem_files", [])
+    if not isinstance(stem_files, list):
+        stem_files = []
+    chop = _read_pattern_field("plg_sample_chop")
+    return {
+        "bpm": _read_pattern_field("bpm"),
+        "style": _read_pattern_field("style"),
+        "stem_session": _read_pattern_field("plg_stem_session"),
+        "stem_files": [Path(str(p)).name for p in stem_files],
+        "mix_blueprint": str(blueprint) if blueprint.is_file() else None,
+        "sample_chop": chop if isinstance(chop, dict) else None,
+    }
+
+
 def get_status() -> dict[str, Any]:
     """Cheap app status for the header/status bar (no filesystem walk)."""
     app_config.load_environment()
     fl_exe = find_fl_executable()
+    export_meta = _read_export_meta() if PATTERN_JSON.is_file() else {}
     return {
         "ok": True,
         "provider": _provider_label_safe(),
@@ -217,8 +247,35 @@ def get_status() -> dict[str, Any]:
         "auto_open_fl": get_auto_open_fl(),
         "library_audio_total": _cached_audio_total(),
         "last_prompt": _get_last_prompt(),
+        "sample_picks": _read_sample_picks(),
         "quota": get_quota(),
+        **export_meta,
     }
+
+
+def reveal_path(path: str) -> dict[str, Any]:
+    """Open a file or its parent folder in the OS shell (Windows Explorer)."""
+    target = Path((path or "").strip())
+    if not target.exists():
+        return _err(f"Path not found: {path}", "not_found")
+    try:
+        import os
+        import sys
+
+        reveal = target if target.is_dir() else target.parent
+        if sys.platform == "win32":
+            os.startfile(reveal)  # noqa: S606 — intentional desktop shell open
+        elif sys.platform == "darwin":
+            import subprocess
+
+            subprocess.run(["open", str(reveal)], check=False)
+        else:
+            import subprocess
+
+            subprocess.run(["xdg-open", str(reveal)], check=False)
+        return {"ok": True, "path": str(reveal)}
+    except OSError as exc:
+        return _err(str(exc), "os_error")
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +304,30 @@ def scan_library() -> dict[str, Any]:
         "projects": catalog.get("projects", []),
         "banks": catalog.get("banks", []),
         "plugins": catalog.get("plugins", []),
+    }
+
+
+def preview_kit(prompt: str) -> dict[str, Any]:
+    """Match kick/snare/clap/808/hats/melody from the library without generating a beat."""
+    prompt = (prompt or "").strip()
+    if not prompt:
+        return _err("Describe your beat first.", "validation")
+
+    app_config.load_environment()
+    samples_dir = get_samples_dir()
+    try:
+        catalog = _scan_library(samples_dir)
+    except FileNotFoundError:
+        return _err(f"Library folder not found: {samples_dir}", "not_found", samples_dir=str(samples_dir))
+
+    from starter_kit import ensure_starter_kit, resolve_track_samples
+
+    ensure_starter_kit()
+    picks = resolve_track_samples(catalog, library_root=samples_dir, prompt=prompt)
+    return {
+        "ok": True,
+        "audio_total": catalog.get("audio_total", 0),
+        "picks": {track: {"name": path.name, "path": str(path)} for track, path in picks.items()},
     }
 
 
@@ -297,6 +378,10 @@ def create_beat(prompt: str, on_progress: ProgressCb | None = None) -> dict[str,
         "sample_count": len(pattern.get("samples") or []),
         "provider": _provider_label_safe(),
         "auto_open_fl": get_auto_open_fl(),
+        "sample_picks": pattern.get("plg_sample_picks") or {},
+        "stem_session": pattern.get("plg_stem_session"),
+        "stem_files": pattern.get("plg_stem_files") or [],
+        "mix_blueprint": str(PROJECT_DIR / "READ_ME_IMBA.txt"),
         "quota": get_quota(),
     }
     _emit(on_progress, PHASE_DONE, 1.0, "Beat ready")
@@ -526,6 +611,7 @@ __all__ = [
     "regenerate",
     "open_in_fl",
     "install_fl_scripts",
+    "reveal_path",
     "split_stems_file",
     # actions (async job)
     "start_beat",

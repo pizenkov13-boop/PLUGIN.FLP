@@ -8,8 +8,8 @@ automation proved unreliable (RU/EN UI, focus, OLE drag). The one thing FL
 
     FL64.exe C:\\PLUG.FLP\\PLG_Session.flp
 
-So PLG writes a tiny, valid ``.flp`` containing three named Sampler channels
-(Hi-Hats / Sub 808 / Melody) and one pattern holding the notes. When
+So PLG writes a tiny, valid ``.flp`` containing six named Sampler channels
+(Kick / Snare / Clap / Sub 808 / Hi-Hats / Melody) and one pattern holding the notes. When
 ``plg_sound_paths`` is present in the pattern JSON, each channel also gets a
 ``SamplePath`` event so FL loads starter or library wavs automatically.
 
@@ -31,7 +31,7 @@ import struct
 from pathlib import Path
 from typing import Any
 
-from pattern_utils import TRACK_KEYS, parse_note_name, step_to_beats, track_notes
+from pattern_utils import CHANNEL_NAMES, TRACK_KEYS, parse_note_name, step_to_beats, track_notes
 
 # Pulses per quarter note stored in the file header. 96 is a classic, always
 # FL-supported value; note times below are computed in these units.
@@ -59,12 +59,6 @@ _CH_SAMPLE_PATH = _TEXT + 4  # 196, absolute path to loaded sample (PyFLP Sample
 _PAT_NEW = _WORD + 1        # 65, u16 pattern number (selects current pattern)
 _PAT_NAME = _TEXT + 1       # 193, pattern name
 _PAT_NOTES = _DATA + 16     # 224, array of 24-byte note structs
-
-CHANNEL_NAMES = {
-    "hi_hats": "PLG Hi-Hats",
-    "sub_808": "PLG Sub 808",
-    "melody_lead": "PLG Melody / Lead",
-}
 
 # neutral note byte values (PyFLP NotesEvent defaults)
 _FINE_PITCH = 120   # 0 cents
@@ -120,8 +114,10 @@ def _note_struct(rack_channel: int, entry: dict[str, Any]) -> bytes:
     position = max(0, _ticks(entry["time_step"]))
     length = max(1, _ticks(entry["length"]))
     key = max(0, min(131, parse_note_name(entry["note"])))
-    velocity = int(entry.get("velocity", _PAN))
+    velocity = int(entry.get("velocity", 100))
     velocity = max(1, min(128, velocity))
+    pan = int(entry.get("pan", _PAN))
+    pan = max(0, min(127, pan))
     return struct.pack(
         "<IHHIHHBBBBBBBB",
         position,        # position (ticks)
@@ -134,7 +130,7 @@ def _note_struct(rack_channel: int, entry: dict[str, Any]) -> bytes:
         0,               # _u1
         _RELEASE,        # release
         _MIDI_CH,        # midi channel
-        _PAN,            # pan
+        pan,             # pan
         velocity,        # velocity
         _MOD_X,          # mod x (filter cutoff)
         _MOD_Y,          # mod y (resonance)
@@ -142,8 +138,15 @@ def _note_struct(rack_channel: int, entry: dict[str, Any]) -> bytes:
 
 
 def _channels_with_layout(data: dict[str, Any]) -> list[str]:
-    """Always lay out the three PLG channels so the rack is predictable."""
-    return [key for key in TRACK_KEYS]
+    """Lay out PLG channels; skip optional tracks with no notes."""
+    from pattern_utils import OPTIONAL_TRACK_KEYS, TRACK_KEYS
+
+    channels: list[str] = []
+    for key in TRACK_KEYS:
+        if key in OPTIONAL_TRACK_KEYS and not track_notes(data, key):
+            continue
+        channels.append(key)
+    return channels
 
 
 def _sample_paths_from_data(data: dict[str, Any]) -> dict[str, Path]:

@@ -25,7 +25,8 @@ def export_build_guide(
         "",
         "Files:",
         f"  - {PROJECT_DIR / 'output_pattern.json'}",
-        f"  - {PROJECT_DIR / 'output_midi'}/*.mid",
+        f"  - {PROJECT_DIR / 'output_midi'}/<session>/Kick.mid, 808_Bass.mid, …",
+        f"  - {PROJECT_DIR / 'READ_ME_IMBA.txt'} (mixing blueprint)",
         "",
     ]
 

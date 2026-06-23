@@ -1,22 +1,34 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec — bundles PLG starter sounds into PLG.exe."""
+"""PyInstaller spec — PLG.exe with starter sounds, bundled kit, and web UI."""
 
 from pathlib import Path
 
 block_cipher = None
 root = Path(SPECPATH)
 
+starter_names = (
+    "PLG_starter_808.wav",
+    "PLG_starter_hat.wav",
+    "PLG_starter_melody.wav",
+    "PLG_starter_kick.wav",
+    "PLG_starter_snare.wav",
+    "PLG_starter_clap.wav",
+    "BUNDLED.json",
+    "README.md",
+    "starter_manifest.json",
+)
+
 starter_files = [
     (str(root / "assets" / "starter" / name), "assets/starter")
-    for name in (
-        "PLG_starter_808.wav",
-        "PLG_starter_hat.wav",
-        "PLG_starter_melody.wav",
-        "BUNDLED.json",
-        "README.md",
-    )
+    for name in starter_names
     if (root / "assets" / "starter" / name).is_file()
 ]
+
+bundled_dir = root / "assets" / "starter" / "bundled_sounds"
+if bundled_dir.is_dir():
+    for path in sorted(bundled_dir.iterdir()):
+        if path.is_file():
+            starter_files.append((str(path), "assets/starter/bundled_sounds"))
 
 asset_files = [
     (str(root / "assets" / name), "assets")
@@ -29,17 +41,24 @@ font_files = [
     for path in (root / "assets" / "fonts").glob("*.ttf")
 ]
 
+web_dist = root / "web" / "dist"
+web_files = [
+    (str(path), str(Path("web/dist") / path.relative_to(web_dist)))
+    for path in web_dist.rglob("*")
+    if path.is_file()
+] if web_dist.is_dir() else []
+
 root_data_files = [
     "plugin_script.py",
     "FL_WORKFLOWS.md",
     "FL_BRIDGE.md",
     "FL_SCRIPTS.md",
     "START_HERE.md",
-    "user_profile.json",
+    "user_profile.example.json",
     ".env.example",
 ]
 
-datas = starter_files + asset_files + font_files + [
+datas = starter_files + asset_files + font_files + web_files + [
     (str(root / name), ".")
     for name in root_data_files
     if (root / name).is_file()
@@ -52,6 +71,18 @@ hiddenimports = [
     "pretty_midi",
     "mido",
     "dotenv",
+    "webview",
+    "beat_humanize",
+    "hat_roll_engine",
+    "sample_chop_engine",
+    "kit_variety",
+    "mix_blueprint",
+    "producer_brain",
+    "drum_defaults",
+    "sample_match",
+    "build_bundled_sounds",
+    "plg_webview",
+    "plg_api",
 ]
 
 a = Analysis(

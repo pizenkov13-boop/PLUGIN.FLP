@@ -12,9 +12,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from pattern_utils import TRACK_KEYS
 from plg_paths import app_dir
-
-PROJECT_DIR = app_dir()
 PATTERN_JSON = PROJECT_DIR / "output_pattern.json"
 COMBINED_MIDI = PROJECT_DIR / "output_midi" / "PLG_Beat.mid"
 SESSION_FLP = PROJECT_DIR / "PLG_Session.flp"
@@ -44,7 +43,7 @@ def _has_notes(data: dict) -> bool:
     tracks = data.get("tracks")
     if not isinstance(tracks, dict):
         return False
-    return any(tracks.get(key) for key in ("hi_hats", "sub_808", "melody_lead"))
+    return any(tracks.get(key) for key in TRACK_KEYS)
 
 
 def launch_fl_with_session(fl_exe: Path, flp_path: Path) -> None:
@@ -73,7 +72,12 @@ def open_beat_in_fl(project_dir: Path | None = None) -> dict[str, Path | str | b
 
     library_root = Path(data.get("sample_library") or root / "PLG_Library")
     catalog = scan_library(library_root) if library_root.is_dir() else None
-    attach_sounds_to_pattern(data, catalog, library_root=library_root)
+    attach_sounds_to_pattern(
+        data,
+        catalog,
+        library_root=library_root,
+        prompt=str(data.get("user_prompt") or ""),
+    )
     pattern_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # MIDI export is kept for manual import / other DAWs; the .flp is primary.

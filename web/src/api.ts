@@ -9,6 +9,7 @@ import type {
   ApiResult,
   JobHandle,
   JobSnapshot,
+  KitPreviewResult,
   Settings,
   Status,
 } from "./types";
@@ -19,6 +20,7 @@ interface PywebviewApi {
   save_settings(updates: Partial<Settings>): Promise<ApiResult>;
   get_quota(): Promise<Status["quota"]>;
   scan_library(): Promise<ApiResult>;
+  preview_kit(prompt: string): Promise<KitPreviewResult>;
 
   start_beat(prompt: string): Promise<JobHandle>;
   start_regenerate(prompt?: string | null): Promise<JobHandle>;
@@ -29,6 +31,7 @@ interface PywebviewApi {
 
   open_in_fl(): Promise<ApiResult>;
   install_fl_scripts(): Promise<ApiResult>;
+  reveal_path(path: string): Promise<ApiResult>;
 }
 
 declare global {
@@ -61,11 +64,13 @@ export const getSettings = () => api().get_settings();
 export const saveSettings = (u: Partial<Settings>) => api().save_settings(u);
 export const getQuota = () => api().get_quota();
 export const scanLibrary = () => api().scan_library();
+export const previewKit = (prompt: string) => api().preview_kit(prompt) as Promise<KitPreviewResult>;
 export const startBeat = (prompt: string) => api().start_beat(prompt);
 export const startRegenerate = (prompt?: string | null) => api().start_regenerate(prompt ?? null);
 export const startOpenInFl = () => api().start_open_in_fl();
 export const startStemSplit = (source: string) => api().start_stem_split(source);
 export const installFlScripts = () => api().install_fl_scripts();
+export const revealPath = (path: string) => api().reveal_path(path);
 
 /**
  * Poll a job until it finishes. `onUpdate` fires on every tick (running too),

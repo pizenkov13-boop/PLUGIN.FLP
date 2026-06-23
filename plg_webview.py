@@ -19,8 +19,7 @@ prod (default / frozen exe): serve the built ``web/dist`` over a tiny localhost
      ES modules. The dist folder is located via plg_paths so it works both from
      the repo and from inside a PyInstaller bundle (_MEIPASS).
 
-plg_app.py (tkinter) + PLG.pyw remain the shipping entry point until this UI is
-ready; nothing here touches the engine, so both can coexist.
+plg_app.py (tkinter) remains as a legacy fallback; PLG.pyw launches this pywebview UI.
 """
 
 from __future__ import annotations
@@ -72,6 +71,9 @@ class Api:
     def scan_library(self) -> dict:
         return plg_api.scan_library()
 
+    def preview_kit(self, prompt: str) -> dict:
+        return plg_api.preview_kit(prompt)
+
     # --- long actions: start a job, then poll get_job(job_id) --------------
     def start_beat(self, prompt: str) -> dict:
         return plg_api.start_beat(prompt)
@@ -97,6 +99,9 @@ class Api:
 
     def install_fl_scripts(self) -> dict:
         return plg_api.install_fl_scripts()
+
+    def reveal_path(self, path: str) -> dict:
+        return plg_api.reveal_path(path)
 
 
 class _QuietHandler(SimpleHTTPRequestHandler):

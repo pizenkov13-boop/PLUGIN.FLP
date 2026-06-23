@@ -36,7 +36,7 @@ def validate_pattern(data: dict[str, Any]) -> list[str]:
 
     total = sum(expected_note_counts(data).values())
     if total == 0:
-        warnings.append("no notes in hi_hats / sub_808 / melody_lead")
+        warnings.append("no notes in any PLG track")
 
     for key in TRACK_KEYS:
         for index, note in enumerate(track_notes(data, key)):

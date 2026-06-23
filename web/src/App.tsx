@@ -6,22 +6,25 @@ import {
   startBeat,
   startOpenInFl,
 } from "./api";
-import type { JobSnapshot, Status } from "./types";
-
-// NOTE: zero design here on purpose — just enough markup to prove the bridge
-// end-to-end (prompt → CREATE BEAT → OPEN IN FL → status → quota). The opium ×
-// apple visual pass (logo, Anton, theme) is a separate later step.
-
-const PLACEHOLDER = "trap beat, dark melody, hard 808s...";
+import type { BeatResult, JobSnapshot, Status } from "./types";
+import type { View } from "./types/ui";
+import HomeView from "./components/HomeView";
+import SessionView from "./components/SessionView";
+import SettingsView from "./components/SettingsView";
+import Sidebar from "./components/Sidebar";
+import TopBar from "./components/TopBar";
+import PlayerBar from "./components/PlayerBar";
+import "./App.css";
 
 export default function App() {
+  const [view, setView] = useState<View>("home");
   const [status, setStatus] = useState<Status | null>(null);
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [statusLine, setStatusLine] = useState("Loading…");
   const [error, setError] = useState<string | null>(null);
+  const [lastBeat, setLastBeat] = useState<BeatResult | null>(null);
 
-  // Wait for the bridge, then load initial status.
   useEffect(() => {
     ready().then(refreshStatus);
   }, []);
@@ -29,15 +32,15 @@ export default function App() {
   async function refreshStatus() {
     const s = await getStatus();
     setStatus(s);
-    if (!s.has_api_key) setStatusLine("Add an API key in Settings to generate beats");
+    if (!s.has_api_key) setStatusLine("Добавь API key в настройках");
     else if (s.beat_ready) setStatusLine("Beat ready — open in FL Studio");
-    else setStatusLine("Ready — describe your beat");
+    else setStatusLine("Ready — опиши бит");
   }
 
   function onJobUpdate(snap: JobSnapshot) {
     if (snap.status === "running") {
       const secs = Math.floor(snap.elapsed);
-      const tail = secs >= 75 ? " — check internet / API key" : "";
+      const tail = secs >= 75 ? " — проверь интернет / API key" : "";
       setStatusLine(`Generating · ${secs}s · ${snap.phase}${tail}`);
     }
   }
@@ -56,9 +59,11 @@ export default function App() {
         setStatusLine("Error");
       } else {
         setStatusLine("Beat ready");
+        const result = (final.result ?? { ok: true }) as unknown as BeatResult;
+        if (result.ok) setLastBeat(result);
+        setView("session");
         await refreshStatus();
-        const result = final.result as { auto_open_fl?: boolean } | null;
-        if (result?.auto_open_fl) await onOpenInFl();
+        if (result.auto_open_fl) await onOpenInFl();
       }
     } finally {
       setBusy(false);
@@ -88,45 +93,73 @@ export default function App() {
 
   const quota = status?.quota;
   const beatReady = status?.beat_ready ?? false;
+  const flReady = status?.fl_bridge_ready ?? false;
+  const hasPrompt = Boolean(prompt.trim());
+  const canCreate = hasPrompt && !busy;
+  const showTopSearch = view === "home";
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", color: "#eee", background: "#0a0a0a", minHeight: "100vh", padding: 24 }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <strong style={{ fontSize: 22 }}>PLG</strong>
-        <span style={{ fontSize: 12, opacity: 0.7 }}>
-          {status?.provider ?? "—"} · FL Bridge: {status?.fl_bridge_ready ? "Connected" : "Not connected"}
-        </span>
-      </header>
-
-      <label style={{ display: "block", fontSize: 11, letterSpacing: 1, opacity: 0.6, marginBottom: 6 }}>
-        DESCRIBE YOUR BEAT
-      </label>
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder={PLACEHOLDER}
-        rows={4}
-        disabled={busy}
-        style={{ width: "100%", boxSizing: "border-box", background: "#141414", color: "#eee", border: "1px solid #333", borderRadius: 6, padding: 12, fontSize: 14, resize: "vertical" }}
+    <div className="shell">
+      <Sidebar
+        view={view}
+        onNavigate={setView}
+        beatReady={beatReady}
+        flReady={flReady}
       />
 
-      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-        <button onClick={onCreate} disabled={busy || !prompt.trim()} style={{ padding: "10px 20px" }}>
-          {busy ? "GENERATING…" : "CREATE BEAT"}
-        </button>
-        <button onClick={onOpenInFl} disabled={busy || !beatReady} style={{ padding: "10px 20px" }}>
-          OPEN IN FL
-        </button>
+      <div className="shell__main">
+        {showTopSearch && (
+          <TopBar
+            value={prompt}
+            onChange={setPrompt}
+            onSubmit={onCreate}
+            disabled={busy}
+            provider={status?.provider}
+          />
+        )}
+
+        <main className="shell__content">
+          {view === "home" && (
+            <HomeView
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              onSelectPrompt={setPrompt}
+              onCreate={onCreate}
+              onOpenInFl={onOpenInFl}
+              busy={busy}
+              canCreate={canCreate}
+              beatReady={beatReady}
+              error={error}
+              status={status}
+              filter={prompt}
+            />
+          )}
+          {view === "session" && (
+            <SessionView
+              status={status}
+              lastBeat={lastBeat}
+              statusLine={statusLine}
+              busy={busy}
+              beatReady={beatReady}
+              prompt={prompt}
+              onOpenInFl={onOpenInFl}
+              onCreate={onCreate}
+              canCreate={canCreate}
+            />
+          )}
+          {view === "settings" && <SettingsView onSaved={refreshStatus} />}
+        </main>
+
+        <PlayerBar
+          busy={busy}
+          beatReady={beatReady}
+          statusLine={statusLine}
+          quotaLabel={quota && !quota.skipped ? quota.label : undefined}
+          onOpenInFl={onOpenInFl}
+          onCreate={onCreate}
+          canCreate={canCreate}
+        />
       </div>
-
-      {error && (
-        <p style={{ color: "#ff5c5c", fontSize: 13, marginTop: 16, whiteSpace: "pre-wrap" }}>{error}</p>
-      )}
-
-      <footer style={{ display: "flex", justifyContent: "space-between", marginTop: 32, fontSize: 12, opacity: 0.7 }}>
-        <span>{statusLine}</span>
-        <span>{quota && !quota.skipped ? quota.label : ""}</span>
-      </footer>
     </div>
   );
 }

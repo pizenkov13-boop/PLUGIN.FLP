@@ -1,0 +1,101 @@
+.settings {
+  max-width: 560px;
+}
+
+.settings--loading {
+  color: var(--text-3);
+  padding: 24px 0;
+}
+
+.settings__head h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.settings__head p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.settings__card {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings__field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.settings__field input,
+.settings__field select {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+
+.settings__field input:focus,
+.settings__field select:focus {
+  border-color: rgba(59, 124, 255, 0.45);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.settings__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.settings__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  color: #ffb4b4;
+  font-size: 13px;
+}
+
+.settings__save {
+  align-self: flex-start;
+  margin-top: 4px;
+  appearance: none;
+  border: none;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings__save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

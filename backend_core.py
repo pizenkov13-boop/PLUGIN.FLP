@@ -18,6 +18,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from fl_knowledge import full_producer_context
+from producer_brain import producer_system_addon
 from library_paths import ALL_LIBRARY_FOLDERS, DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
 from llm_client import generate_pattern as llm_generate_pattern, provider_label
 from plg_paths import app_dir
@@ -40,6 +41,8 @@ NOTE_SCHEMA: dict[str, Any] = {
         "length": {"type": "number"},
         "velocity": {"type": "integer", "minimum": 0, "maximum": 127},
         "sample": {"type": "string"},
+        "pan": {"type": "integer", "minimum": 0, "maximum": 127},
+        "slide": {"type": "boolean"},
     },
 }
 
@@ -50,7 +53,16 @@ SAMPLE_LAYER_SCHEMA: dict[str, Any] = {
         "file": {"type": "string"},
         "track": {
             "type": "string",
-            "enum": ["hi_hats", "sub_808", "melody_lead", "textures", "fx"],
+            "enum": [
+                "kick",
+                "snare",
+                "clap",
+                "hi_hats",
+                "sub_808",
+                "melody_lead",
+                "textures",
+                "fx",
+            ],
         },
         "time_step": {"type": "number"},
         "note": {"type": "string"},
@@ -72,7 +84,12 @@ RESPONSE_JSON_SCHEMA: dict[str, Any] = {
             "type": "object",
             "required": ["melody_lead", "sub_808", "hi_hats"],
             "properties": {
+                "kick": {"type": "array", "items": NOTE_SCHEMA},
+                "snare": {"type": "array", "items": NOTE_SCHEMA},
+                "clap": {"type": "array", "items": NOTE_SCHEMA},
                 "melody_lead": {"type": "array", "items": NOTE_SCHEMA},
+                "counter_melody": {"type": "array", "items": NOTE_SCHEMA},
+                "snare_layer": {"type": "array", "items": NOTE_SCHEMA},
                 "sub_808": {"type": "array", "items": NOTE_SCHEMA},
                 "hi_hats": {"type": "array", "items": NOTE_SCHEMA},
             },
@@ -143,18 +160,22 @@ SYSTEM_INSTRUCTION_BASE = """\
 Ты знаешь Channel Rack, Piano roll, Mixer, нативные плагины FL. Пишешь как человек, который живёт в FL, а не как ChatGPT. Звук: тёмный, гипнотичный, минимальный — дисторшн на 808, эфирные detuned лиды, space важнее загромождения.
 
 Порядок сборки (build_order) — всегда указывай массив шагов, например:
-["hi_hats", "sub_808", "melody_lead", "samples", "fx_automation", "vocal_fx"]
+["kick", "snare", "clap", "sub_808", "hi_hats", "melody_lead", "samples", "fx_automation", "vocal_fx"]
 
-tracks — три MIDI-дорожки (time_step: 1.0 = один удар/бит, 0.25 = шестнадцатая, 4.0 = один такт).
+tracks — MIDI-дорожки (time_step: 1.0 = один удар/бит, 0.25 = шестнадцатая, 4.0 = один такт).
 КОНКРЕТНЫЕ ПАТТЕРНЫ (дефолт, если промпт не говорит иначе):
-1) hi_hats — ровный pocket 1/8–1/16 (шаг 0.25–0.5) + HAT ROLL каждые 2 такта (триоль/1-16 в конце 2-го и 4-го такта), НЕ постоянная стрельба.
-2) sub_808 — roots на 1 и 3 долю такта (time_step 0.0 и 2.0 внутри такта), slides между нотами, velocity 127, длина 2.0–4.0.
-3) melody_lead — minor dark цепляющий hook, 1–2 октавы, паузы каждые 2 такта под вокал, 4–8 тактов.
+1) kick — punch на 1 и 3 долю (time_step 0.0 и 2.0), короткая length 0.35–0.5, velocity 105–115.
+2) snare — backbeat на 2 и 4 (time_step 1.0 и 3.0), velocity 100–110.
+3) clap — слой на 2 и 4 вместе со snare или только на 4, velocity 85–95, короче snare.
+4) sub_808 — roots на 1 и 3 долю, slides между нотами, velocity 127, длина 2.0–4.0.
+5) hi_hats — pocket 1/8–1/16 + HAT ROLL каждые 2 такта, НЕ постоянная стрельба.
+6) melody_lead — minor dark hook, 1–2 октавы, паузы каждые 2 такта, 4–8 тактов.
 
 Если передан LIBRARY CATALOG — используй все типы ассетов:
 
 AUDIO (wav/mp3) — основной звук:
-- samples[]: file, track, time_step, optional note/velocity
+- samples[]: file, track, time_step, optional note/velocity — pick exact paths from LIBRARY CATALOG when possible
+- PLG also auto-matches 808/hats/melody from the catalog using the user prompt; prefer catalog filenames that match the vibe
 - в notes можно поле "sample" для привязки wav к ноте
 - 808/, hats/, kits/, textures/, melodies/, fx/, splice/
 
@@ -174,7 +195,7 @@ Channel_Precomputed boost=0.30, Fruity_Fast_Dist drive=0.88–0.95 mix=1.0, Frui
 vocal_fx — если промпт про вокал/singing/Don/travis (НЕ AI-голос, только FX на голос юзера):
 reference don toliver melodic, pitch_correction soft, autotune_retune light, reverb plate, delay 1/8 dotted
 
-manual_steps — 3–6 шагов как Don кликал бы в FL 2025: Sampler → FX → Mixer. Указывай имена каналов PLG Sub 808 / PLG Hi-Hats / PLG Melody.
+manual_steps — 3–6 шагов как Don кликал бы в FL 2025: Sampler → FX → Mixer. Указывай каналы PLG Kick / Snare / Clap / Sub 808 / Hi-Hats / Melody.
 
 Любой стиль: opium, f1lthy, working on dying, ken carson, destroy lonely, don toliver, drill — адаптируй паттерны, но мышление оставь FL-native продюсера.
 4-8 тактов. Только чистый JSON.\
@@ -243,7 +264,15 @@ def load_user_profile() -> dict[str, str]:
 
 
 def build_system_instruction(profile: dict[str, str], catalog: dict | None) -> str:
-    parts = [SYSTEM_INSTRUCTION_BASE, "", full_producer_context(), "", "FL user profile:"]
+    parts = [
+        SYSTEM_INSTRUCTION_BASE,
+        "",
+        producer_system_addon(),
+        "",
+        full_producer_context(),
+        "",
+        "FL user profile:",
+    ]
     parts.append(json.dumps(profile, ensure_ascii=False))
     if catalog and catalog.get("total", 0) > 0:
         parts.extend(["", "LIBRARY CATALOG:", format_catalog_for_prompt(catalog)])
@@ -252,7 +281,7 @@ def build_system_instruction(profile: dict[str, str], catalog: dict | None) -> s
             [
                 "\nLIBRARY EMPTY — MIDI ONLY MODE.",
                 "Return samples[] as an empty array. Do NOT request, name or invent any sample files or paths.",
-                "Do NOT add library_refs. Put ALL the work into MIDI: hi_hats, sub_808, melody_lead, "
+                "Do NOT add library_refs. Put ALL the work into MIDI: kick, snare, clap, hi_hats, sub_808, melody_lead, "
                 "bpm, fx_automation, build_order, manual_steps.",
                 "PLG auto-attaches its own built-in starter sounds (808, hat, melody) after generation.",
             ]
@@ -271,10 +300,9 @@ def read_prompt(cli_prompt: str | None) -> str:
 
 
 def count_track_notes(data: dict[str, Any]) -> int:
-    tracks = data.get("tracks", {})
-    if isinstance(tracks, dict):
-        return sum(len(tracks.get(name, [])) for name in ("melody_lead", "sub_808", "hi_hats"))
-    return 0
+    from pattern_utils import count_all_track_notes
+
+    return count_all_track_notes(data)
 
 
 def generate_pattern(prompt: str, system_instruction: str) -> dict[str, Any]:
@@ -321,26 +349,43 @@ def run_pipeline(
     pattern = generate_pattern(prompt, system_instruction)
     pattern["sample_library"] = catalog["root"]
 
+    from beat_humanize import humanize_pattern
+    from drum_defaults import ensure_drum_tracks
     from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
 
+    ensure_drum_tracks(pattern)
+    pattern["user_prompt"] = prompt
+    pattern = humanize_pattern(pattern)
     ensure_starter_kit()
-    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples)
-    save_pattern(pattern)
+    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prompt)
 
     if export_midi:
-        from midi_export import export_combined_midi, export_pattern_to_midi
+        from midi_export import export_stem_session
         from midi_validate import log_validation_report, validate_export
 
         midi_dir = PROJECT_DIR / "output_midi"
-        paths = export_pattern_to_midi(pattern, midi_dir)
-        combined = export_combined_midi(pattern, midi_dir / "PLG_Beat.mid")
-        logging.info("MIDI exported: %s files + %s", len(paths), combined.name)
-        log_validation_report(validate_export(pattern, midi_dir=midi_dir, combined=combined))
+        session = export_stem_session(pattern, midi_dir)
+        stem_dir = session["session_dir"]
+        combined = session["combined_path"]
+        logging.info(
+            "Stem Export Mixer: %s (%s stems + %s)",
+            session["session_name"],
+            len(session["stem_paths"]),
+            combined.name,
+        )
+        log_validation_report(validate_export(pattern, midi_dir=stem_dir, combined=combined))
+        pattern["plg_stem_session"] = str(stem_dir)
+        pattern["plg_stem_files"] = [str(p) for p in session["stem_paths"]]
 
     from guide_export import export_build_guide
+    from mix_blueprint import export_mix_blueprint
 
     export_build_guide(pattern)
-    logging.info("Build guide -> build_guide.txt")
+    stem_hint = pattern.get("plg_stem_session")
+    export_mix_blueprint(pattern, stem_folder=str(stem_hint) if stem_hint else None)
+    logging.info("Build guide -> build_guide.txt | Blueprint -> READ_ME_IMBA.txt")
+
+    save_pattern(pattern)
 
     return pattern
 

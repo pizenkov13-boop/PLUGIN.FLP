@@ -21,6 +21,13 @@ export interface Status {
   auto_open_fl: boolean;
   library_audio_total: number;
   last_prompt: string;
+  sample_picks?: Record<string, string>;
+  bpm?: number;
+  style?: string;
+  stem_session?: string;
+  stem_files?: string[];
+  mix_blueprint?: string | null;
+  sample_chop?: { chop_count?: number; pitch_semitones?: number; tempo_ratio?: number };
   quota: Quota;
 }
 
@@ -46,6 +53,10 @@ export interface BeatResult {
   sample_count?: number;
   provider?: string;
   auto_open_fl?: boolean;
+  sample_picks?: Record<string, string>;
+  stem_session?: string;
+  stem_files?: string[];
+  mix_blueprint?: string;
   quota?: Quota;
 }
 
@@ -72,6 +83,13 @@ export interface ApiResult {
   error?: string;
   error_type?: string;
   [key: string]: unknown;
+}
+
+export interface KitPreviewResult {
+  ok: boolean;
+  audio_total?: number;
+  picks?: Record<string, { name: string; path: string }>;
+  error?: string;
 }
 
 export interface JobHandle {

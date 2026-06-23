@@ -14,11 +14,14 @@ import os
 import flpianoroll as flp
 
 BRIDGE_PATH = r"c:\PLUG.FLP\output_pattern.json"
-TRACK_KEYS = ("hi_hats", "sub_808", "melody_lead")
+TRACK_KEYS = ("kick", "snare", "clap", "sub_808", "hi_hats", "melody_lead")
 TRACK_LABELS = {
-    "hi_hats": "1. Hi-Hats (beat)",
-    "sub_808": "2. Sub 808 (bass)",
-    "melody_lead": "3. Melody / Lead",
+    "kick": "1. Kick",
+    "snare": "2. Snare",
+    "clap": "3. Clap",
+    "sub_808": "4. Sub 808 (bass)",
+    "hi_hats": "5. Hi-Hats",
+    "melody_lead": "6. Melody / Lead",
     "guide": "BUILD GUIDE (all layers)",
 }
 

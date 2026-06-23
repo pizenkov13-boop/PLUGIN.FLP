@@ -46,6 +46,11 @@ def starter_bundle_dir() -> Path:
     return bundle_dir() / "assets" / "starter"
 
 
+def bundled_sounds_dir() -> Path:
+    """Opium / F1LTHY-style one-shot pool shipped with the app."""
+    return starter_bundle_dir() / "bundled_sounds"
+
+
 def resource_path(*parts: str) -> Path:
     """Find a shipped file in the PyInstaller bundle or dev repo."""
     bundled = bundle_dir().joinpath(*parts)
