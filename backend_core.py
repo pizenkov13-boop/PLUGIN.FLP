@@ -22,7 +22,7 @@ from producer_brain import producer_system_addon
 from library_paths import ALL_LIBRARY_FOLDERS, DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
 from llm_client import generate_pattern as llm_generate_pattern, provider_label
 from plg_paths import app_dir
-from sample_catalog import format_catalog_for_prompt, save_catalog, scan_library, scan_samples_directory
+from sample_catalog import format_catalog_for_prompt, save_catalog, scan_library
 
 PROJECT_DIR = app_dir()
 OUTPUT_FILE = PROJECT_DIR / "output_pattern.json"
@@ -362,6 +362,15 @@ def run_pipeline(
 
     ensure_drum_tracks(pattern)
     pattern["user_prompt"] = prepared["user_prompt"]
+
+    from midi_ingest import ingest_library_midi
+
+    ingest_library_midi(
+        pattern,
+        library_root=resolved_samples,
+        prompt=prepared["user_prompt"],
+        style=str(pattern.get("style", "")),
+    )
     pattern = humanize_pattern(pattern)
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
@@ -427,6 +436,15 @@ def run_pipeline_from_pattern(
 
     ensure_drum_tracks(pattern)
     pattern["user_prompt"] = prepared["user_prompt"]
+
+    from midi_ingest import ingest_library_midi
+
+    ingest_library_midi(
+        pattern,
+        library_root=resolved_samples,
+        prompt=prepared["user_prompt"],
+        style=str(pattern.get("style", "")),
+    )
     pattern = humanize_pattern(pattern)
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
