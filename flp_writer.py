@@ -31,7 +31,14 @@ import struct
 from pathlib import Path
 from typing import Any
 
-from pattern_utils import CHANNEL_NAMES, TRACK_KEYS, parse_note_name, step_to_beats, track_notes
+from pattern_utils import (
+    CHANNEL_NAMES,
+    OPTIONAL_TRACK_KEYS,
+    TRACK_KEYS,
+    parse_note_name,
+    step_to_beats,
+    track_notes,
+)
 
 # Pulses per quarter note stored in the file header. 96 is a classic, always
 # FL-supported value; note times below are computed in these units.
@@ -139,8 +146,6 @@ def _note_struct(rack_channel: int, entry: dict[str, Any]) -> bytes:
 
 def _channels_with_layout(data: dict[str, Any]) -> list[str]:
     """Lay out PLG channels; skip optional tracks with no notes."""
-    from pattern_utils import OPTIONAL_TRACK_KEYS, TRACK_KEYS
-
     channels: list[str] = []
     for key in TRACK_KEYS:
         if key in OPTIONAL_TRACK_KEYS and not track_notes(data, key):

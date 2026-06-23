@@ -13,7 +13,6 @@ import subprocess
 from pathlib import Path
 
 from pattern_utils import TRACK_KEYS
-from pattern_utils import TRACK_KEYS
 from plg_paths import app_dir
 
 PROJECT_DIR = app_dir()

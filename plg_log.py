@@ -7,9 +7,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from plg_paths import PROJECT_DIR
+from plg_paths import app_dir
 
-_LOG_PATH = PROJECT_DIR / "plg_session.log"
+_LOG_PATH = app_dir() / "plg_session.log"
 _logger: logging.Logger | None = None
 
 

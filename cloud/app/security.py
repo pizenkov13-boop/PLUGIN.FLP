@@ -56,7 +56,6 @@ def is_banned(
     ip: str | None = None,
     fp: str | None = None,
 ) -> str | None:
-    profile_ban = None
     if user_id:
         prof = client.table("profiles").select("banned,ban_reason").eq("id", user_id).maybe_single().execute()
         if prof.data and prof.data.get("banned"):
