@@ -162,18 +162,54 @@ def apply_mono_stereo_drop(
     for entry in melody_notes:
         note = deepcopy(entry)
         step = _note_step(note)
-        pos_in_phrase = step % phrase_len
-        near_drop = pos_in_phrase >= phrase_len - drop_window
-        bar_in_phrase = int(pos_in_phrase // BEATS_PER_BAR)
+        section = note.get("section")
+        if section in ("chorus", "drop"):
+            wide = True
+        elif section in ("intro", "verse", "outro"):
+            wide = False
+        else:
+            # No section tag (raw humanize call): fall back to phrase position.
+            pos_in_phrase = step % phrase_len
+            near_drop = pos_in_phrase >= phrase_len - drop_window
+            bar_in_phrase = int(pos_in_phrase // BEATS_PER_BAR)
+            wide = near_drop or bar_in_phrase >= phrase_bars - 1
 
-        if near_drop or bar_in_phrase >= phrase_bars - 1:
+        if wide:
             note["pan"] = 48 if int(step * 2) % 2 == 0 else 80
             note["stereo_width"] = 1.0
         else:
             note["pan"] = 64
             note["stereo_width"] = 0.15
+            # Rule 28 — duck the verse melody so the drop hits harder.
+            note["velocity"] = max(1, int(int(note.get("velocity", 100)) * 0.8))
         out.append(note)
     return out
+
+
+def dedupe_heavy_overlaps(
+    pattern: dict[str, Any],
+    *,
+    keys: tuple[str, ...] = ("kick", "sub_808"),
+    eps: float = 0.03,
+) -> None:
+    """Censor: two heavy hits never share a tick — keep the loudest, drop the rest."""
+    tracks = pattern.get("tracks")
+    if not isinstance(tracks, dict):
+        return
+    for key in keys:
+        notes = tracks.get(key)
+        if not isinstance(notes, list) or len(notes) < 2:
+            continue
+        ordered = sorted(notes, key=lambda n: (float(n.get("time_step", 0)), -int(n.get("velocity", 0))))
+        kept: list[dict[str, Any]] = []
+        last: float | None = None
+        for note in ordered:
+            step = float(note.get("time_step", 0))
+            if last is not None and abs(step - last) < eps:
+                continue  # a louder hit already owns this tick
+            kept.append(note)
+            last = step
+        tracks[key] = kept
 
 
 def build_pitch_bend_automation(
@@ -742,6 +778,8 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
 
     # Lay everything into clean registers (808 sub, melody mid, drums native).
     normalize_registers(data)
+    # Censor: no two kick or two 808 hits on the same tick (no phase mush).
+    dedupe_heavy_overlaps(data)
 
     pitch_bends = build_pitch_bend_automation(data)
     if pitch_bends:

@@ -41,3 +41,14 @@ def test_one_bar_drum_loop_tiles_across_bars():
     p = _core()
     arrange_song(p)
     assert len(p["tracks"]["kick"]) >= 16  # kick (chorus) hits many bars, not once
+
+
+def test_section_tags_and_snare_only_in_chorus():
+    p = _core()
+    p["tracks"]["snare"] = [{"time_step": 2.0, "note": "D1", "length": 0.3, "velocity": 108}]
+    arrange_song(p)
+    assert all("section" in n for n in p["tracks"]["melody_lead"])
+    # Verse is sparse: snare lands ONLY in the chorus (bars 24..40 -> beats 96..160).
+    snare = p["tracks"].get("snare", [])
+    assert snare
+    assert all(n.get("section") == "chorus" and 96 <= n["time_step"] < 160 for n in snare)

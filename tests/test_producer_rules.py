@@ -135,6 +135,35 @@ def test_attack_flatten_pushed_to_15ms():
     assert out["plg_producer_meta"]["808_attack_ms"] == 15.0
 
 
+def test_mono_stereo_section_aware():
+    from beat_humanize import apply_mono_stereo_drop
+
+    notes = [
+        {"time_step": 0.0, "note": "A4", "length": 1.0, "velocity": 100, "section": "verse"},
+        {"time_step": 100.0, "note": "A4", "length": 1.0, "velocity": 100, "section": "chorus"},
+    ]
+    out = apply_mono_stereo_drop(notes)
+    verse = next(n for n in out if n["time_step"] == 0.0)
+    chorus = next(n for n in out if n["time_step"] == 100.0)
+    assert verse["stereo_width"] == 0.15
+    assert verse["velocity"] < 100  # verse melody ducked
+    assert chorus["stereo_width"] == 1.0
+
+
+def test_dedupe_heavy_overlaps_keeps_loudest():
+    from beat_humanize import dedupe_heavy_overlaps
+
+    pattern = {"tracks": {"sub_808": [
+        {"time_step": 0.0, "note": "C2", "length": 1.0, "velocity": 90},
+        {"time_step": 0.0, "note": "C2", "length": 1.0, "velocity": 127},
+        {"time_step": 2.0, "note": "C2", "length": 1.0, "velocity": 100},
+    ]}}
+    dedupe_heavy_overlaps(pattern)
+    bass = pattern["tracks"]["sub_808"]
+    assert [n["time_step"] for n in bass] == [0.0, 2.0]
+    assert next(n for n in bass if n["time_step"] == 0.0)["velocity"] == 127
+
+
 def test_normalize_registers_layout():
     from pattern_utils import parse_note_name
 

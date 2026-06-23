@@ -21,6 +21,8 @@ MELODY (OPIUM / RAGE)
 STRUCTURE
 - Write a STRONG 4–8 bar CORE loop worth repeating — PLG auto-develops it into a full song
   (Intro 8 / Verse 16 / Chorus-drop 16 / Outro 8). Don't pad bars yourself.
+- SECTION DYNAMICS (PLG enforces these): Verse = clap + steady 1/8 hats only, melody narrow
+  mono + ducked. Chorus/Drop = hat rolls + layered accent snare + wide stereo + full filth.
 - build_order: kick, snare, clap, sub_808, hi_hats, melody_lead, samples, fx_automation.
 - Optional tracks: counter_melody (sparse), snare_layer (rim — PLG duplicates snare if omitted).
 

@@ -25,8 +25,11 @@ BEATS_PER_BAR = 4.0
 # (section name, bars, tracks that play). ~48 bars of real structure.
 DEFAULT_SECTIONS: tuple[tuple[str, int, tuple[str, ...]], ...] = (
     ("intro", 8, ("melody_lead",)),
-    ("verse", 16, ("melody_lead", "hi_hats", "clap", "snare", "sub_808")),
-    ("chorus", 16, TRACK_KEYS),  # full wall — kick drops in here
+    # Verse stays sparse: clap + steady hats + 808, NO snare. Because hat rolls
+    # and the layered accent snare key off snare hits, dropping snare here means
+    # the verse automatically plays clean while the chorus gets the full wall.
+    ("verse", 16, ("melody_lead", "hi_hats", "clap", "sub_808")),
+    ("chorus", 16, TRACK_KEYS),  # full wall — kick + snare + rolls + layers drop in here
     ("outro", 8, ("melody_lead", "hi_hats")),
 )
 
@@ -39,7 +42,13 @@ def _track_core_beats(notes: list[dict[str, Any]]) -> float:
     return bars * BEATS_PER_BAR
 
 
-def _tile(core_notes: list[dict[str, Any]], start_beat: float, length_beats: float, core_beats: float) -> list[dict[str, Any]]:
+def _tile(
+    core_notes: list[dict[str, Any]],
+    start_beat: float,
+    length_beats: float,
+    core_beats: float,
+    section: str,
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     offset = 0.0
     while offset < length_beats - 1e-6:
@@ -52,6 +61,7 @@ def _tile(core_notes: list[dict[str, Any]], start_beat: float, length_beats: flo
                 continue
             note = deepcopy(entry)
             note["time_step"] = round(start_beat + placed, 5)
+            note["section"] = section  # downstream dynamics key off this
             out.append(note)
         offset += core_beats
     return out
@@ -82,7 +92,7 @@ def arrange_song(
         length_beats = bars * BEATS_PER_BAR
         for key in gated:
             if core.get(key):
-                new_tracks[key].extend(_tile(core[key], start_beat, length_beats, core_beats[key]))
+                new_tracks[key].extend(_tile(core[key], start_beat, length_beats, core_beats[key], name))
         arrangement.append({"name": name, "start_bar": bar_cursor, "bars": bars})
         bar_cursor += bars
 
