@@ -70,16 +70,21 @@ def pick_with_variety(
 ) -> dict[str, tuple[Any, int]]:
     """Wrapper around pick_full_kit that penalizes last generation's files."""
     from sample_match import KIT_TRACK_ORDER, partner_kick_keywords, pick_best_for_track
+    from sound_descriptors import descriptor_hints
 
     last_paths = last_kit_paths()
     used: set[str] = set()
     kit: dict[str, tuple[Any, int]] = {}
 
+    # Timbre targeting: pull samples whose names match the *character* asked for
+    # (dark / hard / distorted / glassy / vintage…), EN or RU, any genre.
+    desc = descriptor_hints(prompt, style)
+
     for track in KIT_TRACK_ORDER:
+        bonus: tuple[str, ...] = desc
         # Rule 16 — Perfect Pair: bias the kick toward the chosen 808's partner.
-        bonus: tuple[str, ...] = ()
         if track == "kick" and "sub_808" in kit:
-            bonus = partner_kick_keywords(Path(kit["sub_808"][0]).name)
+            bonus = tuple(dict.fromkeys(partner_kick_keywords(Path(kit["sub_808"][0]).name) + desc))
         # First pass: strict block on last kit
         path, score = pick_best_for_track(
             catalog,
