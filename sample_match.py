@@ -33,7 +33,7 @@ TRACK_PROFILES: dict[str, dict[str, Any]] = {
     },
     "sub_808": {
         "folders": ("808", "kits"),
-        "strong": ("808", "sub", "subbass", "sub_bass", "bass", "donk", "low"),
+        "strong": ("808", "sub", "subbass", "sub_bass", "bass", "donk", "low", "distort", "reese"),
         "avoid": (
             "kick",
             "snare",

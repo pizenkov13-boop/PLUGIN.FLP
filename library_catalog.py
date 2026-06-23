@@ -22,12 +22,30 @@ MAX_OTHER_IN_PROMPT = 20
 CATALOG_FILE_NAME = "sample_catalog.json"
 
 
+# Keyword → audio bucket, matched anywhere in the relative path (folder names +
+# filename), so a deeply nested custom kit gets sorted by what the files ARE,
+# not by a fixed top-level folder. First match wins; order matters.
+_CATEGORY_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("808", ("808", "sub bass", "subbass", "sub_bass", "sub-bass", "distort", "reese", "bassloop")),
+    ("hats", ("hat", "hi-hat", "hihat", "hi_hat", "cymbal", "ride", "shaker")),
+    ("melodies", ("melod", "bell", "pluck", "piano", "guitar", "synth", "lead", "arp", "chord", "flute", "choir", "keys")),
+    ("fx", ("fx", "riser", "downer", "sweep", "transition", "impact", "whoosh", "reverse")),
+    ("textures", ("texture", "ambient", "drone", "vinyl", "atmos", "noise")),
+    ("kits", ("kick", "snare", "clap", "rim", "perc", "tom", "crash", "snap", "drum")),
+)
+
+
 def _folder_category(path: Path, root: Path) -> str:
-    rel_parts = path.relative_to(root).parts
-    if len(rel_parts) > 1:
-        folder = rel_parts[0].lower()
-        if folder in ALL_LIBRARY_FOLDERS:
-            return folder
+    rel = path.relative_to(root)
+    parts = rel.parts
+    # Fast path: an explicitly organized library (top folder is a known bucket).
+    if len(parts) > 1 and parts[0].lower() in ALL_LIBRARY_FOLDERS:
+        return parts[0].lower()
+    # Otherwise classify by keywords across the whole path (any depth).
+    hay = rel.as_posix().lower()
+    for bucket, keywords in _CATEGORY_KEYWORDS:
+        if any(keyword in hay for keyword in keywords):
+            return bucket
     return "kits" if path.suffix.lower() in AUDIO_EXTENSIONS else "other"
 
 

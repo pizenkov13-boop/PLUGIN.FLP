@@ -10,6 +10,7 @@ from beat_humanize import (
     darken_melody_intervals,
     humanize_pattern,
     ms_to_beats,
+    normalize_registers,
 )
 
 
@@ -117,6 +118,24 @@ def test_humanize_filth_max_from_prompt():
     assert meta["filth_max"] is True
     assert meta["filth"] == 1.0
     assert meta["master_soft_clip"] is True
+
+
+def test_normalize_registers_layout():
+    from pattern_utils import parse_note_name
+
+    pattern = {
+        "tracks": {
+            "kick": [{"time_step": 0.0, "note": "C1", "length": 0.4, "velocity": 110}],
+            "sub_808": [{"time_step": 0.0, "note": "C5", "length": 1.0, "velocity": 120}],
+            "melody_lead": [{"time_step": 0.0, "note": "A2", "length": 1.0, "velocity": 100}],
+        },
+    }
+    normalize_registers(pattern)
+    assert pattern["tracks"]["kick"][0]["note"] == "C5"  # drum → native key
+    sub = parse_note_name(pattern["tracks"]["sub_808"][0]["note"])
+    assert 24 <= sub <= 47  # 808 dropped to the fat sub octave
+    mel = parse_note_name(pattern["tracks"]["melody_lead"][0]["note"])
+    assert 60 <= mel <= 83  # melody lifted into the mid register
 
 
 def test_humanize_pitch_bend_meta():

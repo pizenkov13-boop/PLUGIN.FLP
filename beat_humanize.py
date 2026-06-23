@@ -602,6 +602,46 @@ def reprocess_hi_hats(pattern: dict[str, Any], *, chaos_seed: int | None = None)
     return data
 
 
+# Register layout — stop the "everything mushed in C5-C6" problem.
+DRUM_NATIVE_MIDI = 60        # C5 — one-shot drums play at native pitch here
+SUB_REGISTER = (24, 47)      # C1..B2 — fat sub for the 808
+MELODY_REGISTER = (60, 83)   # C5..B6 — keep the lead clear of the bass
+# Hi-hats are intentionally left alone: apply_hat_roll_pitch tunes rolls (Rule 3).
+DRUM_LAYOUT_KEYS = ("kick", "snare", "snare_layer", "clap")
+
+
+def _clamp_octave(notes: list[dict[str, Any]], lo: int, hi: int) -> None:
+    for entry in notes:
+        try:
+            midi = parse_note_name(str(entry.get("note", "C5")))
+        except ValueError:
+            continue
+        while midi < lo:
+            midi += 12
+        while midi > hi:
+            midi -= 12
+        entry["note"] = _midi_to_name(midi)
+
+
+def normalize_registers(pattern: dict[str, Any]) -> None:
+    """Lay tracks into clean registers so notes don't collide into mush.
+
+    Drums snap to a native key (one-shots play un-pitched); the 808 drops into a
+    fat sub octave; melody/counter sit in the mid register — all preserving
+    pitch class, so the key the humanizer locked stays intact.
+    """
+    tracks = pattern.get("tracks")
+    if not isinstance(tracks, dict):
+        return
+    native = _midi_to_name(DRUM_NATIVE_MIDI)
+    for key in DRUM_LAYOUT_KEYS:
+        for entry in tracks.get(key) or []:
+            entry["note"] = native
+    _clamp_octave(tracks.get("sub_808") or [], *SUB_REGISTER)
+    _clamp_octave(tracks.get("melody_lead") or [], *MELODY_REGISTER)
+    _clamp_octave(tracks.get("counter_melody") or [], *MELODY_REGISTER)
+
+
 def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     """Apply producer-brain post-processing to LLM output."""
     data = deepcopy(pattern)
@@ -699,6 +739,9 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
             if counter:
                 tracks["counter_melody"] = counter
         tracks["melody_lead"] = melody
+
+    # Lay everything into clean registers (808 sub, melody mid, drums native).
+    normalize_registers(data)
 
     pitch_bends = build_pitch_bend_automation(data)
     if pitch_bends:
