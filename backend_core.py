@@ -330,11 +330,17 @@ def run_pipeline(
     samples_dir: Path | None = None,
     *,
     export_midi: bool = True,
+    locale: str | None = None,
 ) -> dict[str, Any]:
     """Main generation pipeline for CLI and GUI."""
     load_environment()
     resolved_samples = resolve_samples_dir(str(samples_dir) if samples_dir else None)
     ensure_samples_library(resolved_samples, quiet=True)
+
+    from prompt_locale import apply_prompt_metadata, prepare_prompt_for_llm
+
+    prepared = prepare_prompt_for_llm(prompt, locale)
+    llm_prompt = prepared["llm_prompt"]
 
     catalog = scan_library(resolved_samples)
     save_catalog(catalog, CATALOG_FILE)
@@ -346,7 +352,8 @@ def run_pipeline(
     profile = load_user_profile()
     system_instruction = build_system_instruction(profile, catalog)
     logging.info("LLM provider: %s", provider_label())
-    pattern = generate_pattern(prompt, system_instruction)
+    pattern = generate_pattern(llm_prompt, system_instruction)
+    pattern = apply_prompt_metadata(pattern, prepared)
     pattern["sample_library"] = catalog["root"]
 
     from beat_humanize import humanize_pattern
@@ -354,10 +361,10 @@ def run_pipeline(
     from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
 
     ensure_drum_tracks(pattern)
-    pattern["user_prompt"] = prompt
+    pattern["user_prompt"] = prepared["user_prompt"]
     pattern = humanize_pattern(pattern)
     ensure_starter_kit()
-    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prompt)
+    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
 
     if export_midi:
         from midi_export import export_stem_session
@@ -387,6 +394,62 @@ def run_pipeline(
 
     save_pattern(pattern)
 
+    return pattern
+
+
+def run_pipeline_from_pattern(
+    pattern: dict[str, Any],
+    prompt: str,
+    samples_dir: Path | None = None,
+    *,
+    export_midi: bool = True,
+    locale: str | None = None,
+) -> dict[str, Any]:
+    """Finalize a cloud-generated pattern locally (no LLM call)."""
+    load_environment()
+    resolved_samples = resolve_samples_dir(str(samples_dir) if samples_dir else None)
+    ensure_samples_library(resolved_samples, quiet=True)
+
+    catalog = scan_library(resolved_samples)
+    save_catalog(catalog, CATALOG_FILE)
+    from prompt_locale import prepare_prompt_for_llm
+
+    prepared = prepare_prompt_for_llm(prompt, locale or pattern.get("plg_locale"))
+    pattern = dict(pattern)
+    pattern.setdefault("plg_locale", prepared["plg_locale"])
+    if prepared.get("plg_style_tags"):
+        pattern.setdefault("plg_style_tags", prepared["plg_style_tags"])
+    pattern["sample_library"] = catalog["root"]
+
+    from beat_humanize import humanize_pattern
+    from drum_defaults import ensure_drum_tracks
+    from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
+
+    ensure_drum_tracks(pattern)
+    pattern["user_prompt"] = prepared["user_prompt"]
+    pattern = humanize_pattern(pattern)
+    ensure_starter_kit()
+    attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
+
+    if export_midi:
+        from midi_export import export_stem_session
+        from midi_validate import log_validation_report, validate_export
+
+        midi_dir = PROJECT_DIR / "output_midi"
+        session = export_stem_session(pattern, midi_dir)
+        stem_dir = session["session_dir"]
+        combined = session["combined_path"]
+        log_validation_report(validate_export(pattern, midi_dir=stem_dir, combined=combined))
+        pattern["plg_stem_session"] = str(stem_dir)
+        pattern["plg_stem_files"] = [str(p) for p in session["stem_paths"]]
+
+    from guide_export import export_build_guide
+    from mix_blueprint import export_mix_blueprint
+
+    export_build_guide(pattern)
+    stem_hint = pattern.get("plg_stem_session")
+    export_mix_blueprint(pattern, stem_folder=str(stem_hint) if stem_hint else None)
+    save_pattern(pattern)
     return pattern
 
 

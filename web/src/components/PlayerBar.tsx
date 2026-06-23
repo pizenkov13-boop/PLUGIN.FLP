@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import "./PlayerBar.css";
 
 type Props = {
@@ -19,13 +20,15 @@ export default function PlayerBar({
   onOpenInFl,
   onCreate,
 }: Props) {
+  const { t } = useI18n();
+
   const primaryLabel = busy
-    ? "Working…"
+    ? t("player.working")
     : beatReady
-      ? "Open in FL Studio"
+      ? t("player.openInFl")
       : canCreate
-        ? "Create beat"
-        : "Describe a beat";
+        ? t("player.createBeat")
+        : t("player.describeBeat");
 
   const primaryAction = beatReady && !busy ? onOpenInFl : canCreate && !busy ? onCreate : undefined;
 
@@ -33,7 +36,7 @@ export default function PlayerBar({
     <footer className="player">
       <div className="player__center">
         <p className={`player__status ${busy ? "player__status--busy" : ""}`}>{statusLine}</p>
-        <p className="player__hint">Слушай и своди в FL Studio — PLG готовит сессию и stems.</p>
+        <p className="player__hint">{t("player.hint")}</p>
       </div>
 
       <div className="player__right">

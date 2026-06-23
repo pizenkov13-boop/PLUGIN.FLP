@@ -1,12 +1,16 @@
 import type { View } from "../types/ui";
-import { IconFl, IconHome, IconSettings, IconWave } from "./icons";
+import { useI18n } from "../i18n";
+import { IconFl, IconHelp, IconHome, IconLibrary, IconSettings, IconTools, IconWave } from "./icons";
 import logoImg from "../../../assets/logo.png";
 import "./Sidebar.css";
 
-const NAV: { id: View; label: string; icon: typeof IconHome }[] = [
-  { id: "home", label: "Главная", icon: IconHome },
-  { id: "session", label: "Сессия", icon: IconWave },
-  { id: "settings", label: "Настройки", icon: IconSettings },
+const NAV: { id: View; icon: typeof IconHome }[] = [
+  { id: "home", icon: IconHome },
+  { id: "session", icon: IconWave },
+  { id: "library", icon: IconLibrary },
+  { id: "tools", icon: IconTools },
+  { id: "help", icon: IconHelp },
+  { id: "settings", icon: IconSettings },
 ];
 
 type Props = {
@@ -14,9 +18,12 @@ type Props = {
   onNavigate: (view: View) => void;
   beatReady: boolean;
   flReady: boolean;
+  quotaLabel?: string;
 };
 
-export default function Sidebar({ view, onNavigate, beatReady, flReady }: Props) {
+export default function Sidebar({ view, onNavigate, beatReady, flReady, quotaLabel }: Props) {
+  const { t } = useI18n();
+
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -25,7 +32,7 @@ export default function Sidebar({ view, onNavigate, beatReady, flReady }: Props)
       </div>
 
       <nav className="sidebar__nav">
-        {NAV.map(({ id, label, icon: Icon }) => (
+        {NAV.map(({ id, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -33,16 +40,17 @@ export default function Sidebar({ view, onNavigate, beatReady, flReady }: Props)
             onClick={() => onNavigate(id)}
           >
             <Icon />
-            <span>{label}</span>
+            <span>{t(`nav.${id}`)}</span>
             {id === "session" && beatReady && <span className="sidebar__badge" />}
           </button>
         ))}
       </nav>
 
       <div className="sidebar__footer">
+        {quotaLabel && <div className="sidebar__quota">{quotaLabel}</div>}
         <div className={`sidebar__fl ${flReady ? "sidebar__fl--ok" : ""}`}>
           <IconFl />
-          <span>{flReady ? "FL Bridge online" : "FL Bridge offline"}</span>
+          <span>{flReady ? t("fl.online") : t("fl.offline")}</span>
         </div>
       </div>
     </aside>

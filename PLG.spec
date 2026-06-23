@@ -32,7 +32,7 @@ if bundled_dir.is_dir():
 
 asset_files = [
     (str(root / "assets" / name), "assets")
-    for name in ("logo.svg", "logo.png", "Frame 2.svg")
+    for name in ("logo.svg", "logo.png", "Frame 2.svg", "prompt_tags.json", "mix_blueprint_i18n.json")
     if (root / "assets" / name).is_file()
 ]
 
@@ -53,9 +53,11 @@ root_data_files = [
     "FL_WORKFLOWS.md",
     "FL_BRIDGE.md",
     "FL_SCRIPTS.md",
+    "FL_VERSIONS.md",
     "START_HERE.md",
     "user_profile.example.json",
     ".env.example",
+    ".env.release",
 ]
 
 datas = starter_files + asset_files + font_files + web_files + [
@@ -72,6 +74,8 @@ hiddenimports = [
     "mido",
     "dotenv",
     "webview",
+    "httpx",
+    "sentry_sdk",
     "beat_humanize",
     "hat_roll_engine",
     "sample_chop_engine",
@@ -84,6 +88,12 @@ hiddenimports = [
     "pattern_tools",
     "plg_webview",
     "plg_api",
+    "plg_cloud",
+    "plg_device",
+    "plg_sentry",
+    "plg_updater",
+    "plg_log",
+    "plg_analytics",
 ]
 
 a = Analysis(

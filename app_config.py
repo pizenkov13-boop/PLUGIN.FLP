@@ -3,15 +3,38 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
 from dotenv import load_dotenv
 from library_paths import DEFAULT_LIBRARY_DIR, LEGACY_LIBRARY_DIR
-from plg_paths import app_dir
+from plg_paths import app_dir, bundle_dir
 
 PROJECT_DIR = app_dir()
 ENV_FILE = PROJECT_DIR / ".env"
 ENV_EXAMPLE = PROJECT_DIR / ".env.example"
+RELEASE_ENV = bundle_dir() / ".env.release"
+
+
+def app_version() -> str:
+    load_environment()
+    return os.getenv("PLG_APP_VERSION", "1.0.0")
+
+
+def is_release_build() -> bool:
+    load_environment()
+    return os.getenv("PLG_RELEASE_BUILD", "").strip().lower() in ("1", "true", "yes")
+
+
+def seed_env_from_bundle() -> None:
+    """First run of frozen exe — copy bundled .env.release or .env.example."""
+    if ENV_FILE.exists():
+        return
+    for src in (RELEASE_ENV, ENV_EXAMPLE, bundle_dir() / ".env.example"):
+        if src.is_file():
+            shutil.copy(src, ENV_FILE)
+            load_dotenv(ENV_FILE, override=True)
+            return
 
 MANAGED_KEYS = (
     "PLG_LLM_PROVIDER",

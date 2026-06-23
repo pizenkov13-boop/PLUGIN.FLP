@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import { IconSearch } from "./icons";
 import "./TopBar.css";
 
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export default function TopBar({ value, onChange, onSubmit, disabled, provider }: Props) {
+  const { t } = useI18n();
+
   return (
     <header className="topbar">
       <div className="topbar__search">
@@ -24,7 +27,7 @@ export default function TopBar({ value, onChange, onSubmit, disabled, provider }
               onSubmit();
             }
           }}
-          placeholder="Опиши бит — trap, dark melody, hard 808s…"
+          placeholder={t("topbar.placeholder")}
           disabled={disabled}
           spellCheck={false}
         />

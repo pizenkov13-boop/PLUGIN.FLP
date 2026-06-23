@@ -84,6 +84,13 @@
   margin-top: 8px;
 }
 
+.sidebar__quota {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  color: var(--text-4);
+  line-height: 1.4;
+}
+
 .sidebar__fl {
   display: flex;
   align-items: center;

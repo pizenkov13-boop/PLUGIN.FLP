@@ -24,9 +24,23 @@ SESSION_FLP = PROJECT_DIR / "PLG_Session.flp"
 FL_CANDIDATES = (
     Path(r"C:\Program Files\Image-Line\FL Studio 2025\FL64.exe"),
     Path(r"C:\Program Files\Image-Line\FL Studio 24\FL64.exe"),
+    Path(r"C:\Program Files\Image-Line\FL Studio 23\FL64.exe"),
+    Path(r"C:\Program Files\Image-Line\FL Studio 22\FL64.exe"),
     Path(r"C:\Program Files\Image-Line\FL Studio 21\FL64.exe"),
     Path(r"C:\Program Files (x86)\Image-Line\FL Studio 20\FL64.exe"),
+    Path(r"C:\Program Files\Image-Line\FL Studio 20\FL64.exe"),
+    Path(r"C:\Program Files (x86)\Image-Line\FL Studio 12\FL64.exe"),
 )
+
+
+def fl_version_label(exe: Path | None) -> str | None:
+    """Human-readable FL version from install folder name."""
+    if exe is None:
+        return None
+    parent = exe.parent.name
+    if parent.startswith("FL Studio"):
+        return parent.replace("FL Studio ", "FL ").strip()
+    return parent
 
 
 def find_fl_executable() -> Path | None:

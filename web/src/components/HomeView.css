@@ -104,6 +104,18 @@
   margin-top: 18px;
 }
 
+.home__regen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home__regen-cost {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
 /* Prompt panel */
 .prompt-panel {
   padding: 20px 22px;

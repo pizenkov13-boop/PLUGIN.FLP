@@ -1,6 +1,11 @@
 {
-  "source": "plg_synth",
+  "source": "plg_bundled",
+  "bundle_version": 1,
   "files": {
+    "kick": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_kick.wav",
+    "snare": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_snare.wav",
+    "snare_layer": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_snare.wav",
+    "clap": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_clap.wav",
     "hi_hats": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_hat.wav",
     "sub_808": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_808.wav",
     "melody_lead": "C:\\PLUG.FLP\\assets\\starter\\PLG_starter_melody.wav"

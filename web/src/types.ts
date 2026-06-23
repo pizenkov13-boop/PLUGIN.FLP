@@ -11,11 +11,30 @@ export interface Quota {
   label: string;
 }
 
+export interface BillingInfo {
+  status: string;
+  price_tier?: string;
+  price_label?: string;
+  trial_remaining?: number;
+  grace_days_left?: number;
+  days_until_renewal?: number;
+  can_subscribe?: boolean;
+  needs_payment?: boolean;
+}
+
 export interface Status {
   ok: boolean;
+  cloud_mode?: boolean;
+  release_build?: boolean;
+  signed_in?: boolean;
+  auth_email?: string | null;
+  app_version?: string;
+  network_online?: boolean;
   provider: string;
   has_api_key: boolean;
   fl_bridge_ready: boolean;
+  fl_installed?: boolean;
+  fl_version?: string | null;
   fl_executable: string | null;
   beat_ready: boolean;
   auto_open_fl: boolean;
@@ -99,4 +118,29 @@ export interface JobHandle {
   job_id: string;
   kind: string;
   status: JobStatus;
+}
+
+export interface PickResult {
+  ok: boolean;
+  path?: string;
+  cancelled?: boolean;
+  error?: string;
+}
+
+export interface AppInfo {
+  ok: boolean;
+  version: string;
+  project_dir: string;
+  fl_executable: string | null;
+  fl_bridge_ready: boolean;
+  demucs_available: boolean;
+  starter: {
+    dir: string;
+    bundle_dir: string;
+    source: string;
+    bundled: boolean;
+    incoming_dir: string;
+  };
+  docs: Record<string, string>;
+  quota: Quota;
 }

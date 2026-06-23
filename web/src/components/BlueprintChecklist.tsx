@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getProducerBlueprint } from "../api";
+import { useI18n } from "../i18n";
 import "./BlueprintChecklist.css";
 
 const STORAGE_KEY = "plg-blueprint-done";
@@ -26,6 +27,7 @@ function saveDone(sessionKey: string, done: Set<string>) {
 }
 
 export default function BlueprintChecklist({ beatReady, sessionKey }: Props) {
+  const { t } = useI18n();
   const [steps, setSteps] = useState<Step[]>([]);
   const [done, setDone] = useState<Set<string>>(() => loadDone(sessionKey));
 
@@ -62,7 +64,7 @@ export default function BlueprintChecklist({ beatReady, sessionKey }: Props) {
   return (
     <section className="blueprint">
       <div className="blueprint__head">
-        <h3>Producer Blueprint</h3>
+        <h3>{t("blueprint.title")}</h3>
         <span className="blueprint__count">
           {completed}/{steps.length}
         </span>

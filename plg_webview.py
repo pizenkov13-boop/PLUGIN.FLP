@@ -35,8 +35,10 @@ from pathlib import Path
 import webview
 
 import plg_api
-from app_config import load_environment
+from app_config import load_environment, seed_env_from_bundle
 from plg_paths import resource_path
+from plg_sentry import init_desktop_sentry
+from plg_log import init_session_log
 from starter_kit import ensure_starter_kit
 
 logger = logging.getLogger("plg.webview")
@@ -75,8 +77,11 @@ class Api:
         return plg_api.preview_kit(prompt)
 
     # --- long actions: start a job, then poll get_job(job_id) --------------
-    def start_beat(self, prompt: str) -> dict:
-        return plg_api.start_beat(prompt)
+    def start_beat(self, prompt: str, locale: str | None = None) -> dict:
+        return plg_api.start_beat(prompt, locale)
+
+    def set_ui_locale(self, locale: str) -> dict:
+        return plg_api.set_ui_locale(locale)
 
     def start_regenerate(self, prompt: str | None = None) -> dict:
         return plg_api.start_regenerate(prompt)
@@ -118,6 +123,104 @@ class Api:
     def get_producer_blueprint(self) -> dict:
         return plg_api.get_producer_blueprint()
 
+    def get_auth_status(self) -> dict:
+        return plg_api.get_auth_status()
+
+    def cloud_signup(
+        self,
+        email: str,
+        password: str,
+        captcha_token: str | None = None,
+        invite_code: str | None = None,
+        accept_terms: bool = False,
+        confirm_age: bool = False,
+    ) -> dict:
+        return plg_api.cloud_signup(
+            email, password, captcha_token, invite_code, accept_terms, confirm_age
+        )
+
+    def cloud_delete_account(self) -> dict:
+        return plg_api.cloud_delete_account()
+
+    def cloud_login(self, email: str, password: str) -> dict:
+        return plg_api.cloud_login(email, password)
+
+    def cloud_logout(self) -> dict:
+        return plg_api.cloud_logout()
+
+    def cloud_reset_password(self, email: str) -> dict:
+        return plg_api.cloud_reset_password(email)
+
+    def cloud_billing_status(self) -> dict:
+        return plg_api.cloud_billing_status()
+
+    def cloud_billing_checkout(self, price_tier: str | None = None) -> dict:
+        return plg_api.cloud_billing_checkout(price_tier)
+
+    def cloud_fetch_status(self) -> dict:
+        return plg_api.cloud_fetch_status()
+
+    def cloud_submit_feedback(
+        self,
+        category: str,
+        message: str,
+        attach_log: bool = False,
+    ) -> dict:
+        return plg_api.cloud_submit_feedback(category, message, attach_log=attach_log)
+
+    def check_for_updates(self) -> dict:
+        return plg_api.check_for_updates()
+
+    def download_update(self) -> dict:
+        return plg_api.download_update()
+
+    def apply_downloaded_update(self) -> dict:
+        return plg_api.apply_downloaded_update()
+
+    def open_external_url(self, url: str) -> dict:
+        return plg_api.open_external_url(url)
+
+    def import_kit_folder(self, source: str) -> dict:
+        return plg_api.import_kit_folder(source)
+
+    def get_app_info(self) -> dict:
+        return plg_api.get_app_info()
+
+    def open_document(self, doc_id: str) -> dict:
+        return plg_api.open_document(doc_id)
+
+    def stems_status(self) -> dict:
+        return plg_api.stems_status()
+
+    def pick_folder(self) -> dict:
+        try:
+            if not webview.windows:
+                return {"ok": False, "error": "Window not ready.", "error_type": "ui"}
+            paths = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+            if paths and len(paths) > 0:
+                return {"ok": True, "path": paths[0]}
+            return {"ok": False, "cancelled": True}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc), "error_type": "ui"}
+
+    def pick_audio_file(self) -> dict:
+        try:
+            if not webview.windows:
+                return {"ok": False, "error": "Window not ready.", "error_type": "ui"}
+            paths = webview.windows[0].create_file_dialog(
+                webview.OPEN_DIALOG,
+                allow_multiple=False,
+                file_types=(
+                    "Audio (*.mp3;*.wav;*.flac;*.ogg;*.m4a)",
+                    "All files (*.*)",
+                ),
+            )
+            if paths and len(paths) > 0:
+                return {"ok": True, "path": paths[0]}
+            return {"ok": False, "cancelled": True}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc), "error_type": "ui"}
+
 
 class _QuietHandler(SimpleHTTPRequestHandler):
     """Static handler that doesn't spam the log with every asset request."""
@@ -158,6 +261,10 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | PLG webview | %(levelname)s | %(message)s")
     load_environment()
+    seed_env_from_bundle()
+    load_environment()
+    init_desktop_sentry()
+    init_session_log()
     ensure_starter_kit()
 
     dev = args.dev or os.environ.get("PLG_DEV") == "1"

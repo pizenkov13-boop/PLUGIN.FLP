@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { bakeSession, chaosRoll, flipBeat, setFilthMode } from "../api";
 import type { ApiResult } from "../types";
+import { useI18n } from "../i18n";
 import "./ProducerConsole.css";
 
 type Props = {
@@ -18,6 +19,7 @@ export default function ProducerConsole({
   onUpdated,
   onError,
 }: Props) {
+  const { t } = useI18n();
   const [toolBusy, setToolBusy] = useState(false);
 
   async function run(action: () => Promise<ApiResult>, label: string) {
@@ -40,10 +42,10 @@ export default function ProducerConsole({
   return (
     <section className="console">
       <div className="console__head">
-        <h3>Producer Console</h3>
+        <h3>{t("console.title")}</h3>
         {filthMode && (
           <span className="console__filth-banner" aria-live="polite">
-            CLIPPER ACTIVE // MAX FILTH
+            {t("console.filthBanner")}
           </span>
         )}
       </div>
@@ -54,10 +56,9 @@ export default function ProducerConsole({
           className="console__btn console__btn--fire"
           disabled={locked}
           onClick={() => run(bakeSession, "Bake")}
-          title="Export stems, write .flp, refresh mix guide"
         >
           <span className="console__icon">⚡</span>
-          <span>Bake Stems</span>
+          <span>{t("console.bake")}</span>
         </button>
 
         <button
@@ -65,10 +66,9 @@ export default function ProducerConsole({
           className="console__btn"
           disabled={locked}
           onClick={() => run(flipBeat, "Flip")}
-          title="Reverse melody + re-chop samples"
         >
           <span className="console__icon">🔀</span>
-          <span>Flip Beat</span>
+          <span>{t("console.flip")}</span>
         </button>
 
         <button
@@ -76,10 +76,9 @@ export default function ProducerConsole({
           className="console__btn"
           disabled={locked}
           onClick={() => run(chaosRoll, "Chaos")}
-          title="New hat rolls 1/32–1/64 before snare"
         >
           <span className="console__icon">🎲</span>
-          <span>Chaos Roll</span>
+          <span>{t("console.chaos")}</span>
         </button>
 
         <button
@@ -87,15 +86,14 @@ export default function ProducerConsole({
           className={`console__btn console__btn--toggle ${filthMode ? "console__btn--on" : ""}`}
           disabled={locked}
           onClick={() => run(() => setFilthMode(!filthMode), "Filth")}
-          title="Opium mix preset — configure Soft Clipper in FL"
         >
           <span className="console__icon">🔌</span>
-          <span>{filthMode ? "Filth ON" : "Route Filth"}</span>
+          <span>{filthMode ? t("console.filthOn") : t("console.filthRoute")}</span>
         </button>
       </div>
 
-      {toolBusy && <p className="console__hint">Applying…</p>}
-      {!beatReady && <p className="console__hint">Сгенерируй бит, чтобы открыть пульт.</p>}
+      {toolBusy && <p className="console__hint">{t("console.applying")}</p>}
+      {!beatReady && <p className="console__hint">{t("console.needBeat")}</p>}
     </section>
   );
 }

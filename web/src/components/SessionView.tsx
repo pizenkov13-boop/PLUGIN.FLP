@@ -1,5 +1,7 @@
 import type { ApiResult, BeatResult, Status } from "../types";
+import { IconRegenerate } from "./icons";
 import { revealPath } from "../api";
+import { useI18n } from "../i18n";
 import BlueprintChecklist from "./BlueprintChecklist";
 import ProducerConsole from "./ProducerConsole";
 import "./SessionView.css";
@@ -13,6 +15,7 @@ type Props = {
   prompt: string;
   onOpenInFl: () => void;
   onCreate: () => void;
+  onRegenerate?: () => void;
   canCreate: boolean;
   onToolResult: (result: ApiResult) => void;
   onToolError: (message: string) => void;
@@ -28,11 +31,13 @@ export default function SessionView({
   prompt,
   onOpenInFl,
   onCreate,
+  onRegenerate,
   canCreate,
   onToolResult,
   onToolError,
   onRefresh,
 }: Props) {
+  const { t } = useI18n();
   const last = status?.last_prompt?.trim();
   const bpm = lastBeat?.bpm ?? status?.bpm;
   const style = lastBeat?.style ?? status?.style;
@@ -56,43 +61,58 @@ export default function SessionView({
   return (
     <div className="session">
       <div className="session__head">
-        <h1>Сессия</h1>
-        <p>Текущий бит и статус экспорта в FL Studio.</p>
+        <h1>{t("session.title")}</h1>
+        <p>{t("session.desc")}</p>
       </div>
 
       <div className={`session__card ${beatReady ? "session__card--ready" : ""}`}>
         <div className="session__status-row">
           <span className={`session__pill ${beatReady ? "session__pill--ready" : ""}`}>
-            {beatReady ? "Beat ready" : busy ? "Generating" : "No beat yet"}
+            {beatReady ? t("session.beatReady") : busy ? t("session.generating") : t("session.noBeat")}
           </span>
           <span className="session__line">{statusLine}</span>
         </div>
 
         <div className="session__prompt">
-          <span className="session__label">Промпт</span>
-          <p>{prompt.trim() || last || "—"}</p>
+          <span className="session__label">{t("session.prompt")}</span>
+          <p>{prompt.trim() || last || t("common.dash")}</p>
         </div>
 
         <div className="session__meta">
-          <span>Provider · {status?.provider ?? "—"}</span>
-          <span>FL · {status?.fl_bridge_ready ? "Connected" : "Offline"}</span>
-          {bpm != null && <span>BPM · {bpm}</span>}
-          {style && <span>Style · {style}</span>}
+          <span>
+            {t("session.provider")} · {status?.provider ?? t("common.dash")}
+          </span>
+          <span>
+            FL · {status?.fl_bridge_ready ? t("session.connected") : t("session.offline")}
+          </span>
+          {bpm != null && (
+            <span>
+              {t("session.bpm")} · {bpm}
+            </span>
+          )}
+          {style && (
+            <span>
+              {t("session.style")} · {style}
+            </span>
+          )}
         </div>
 
         {chop?.chop_count != null && (
           <div className="session__export">
-            <span className="session__label">Sample chop</span>
+            <span className="session__label">{t("session.sampleChop")}</span>
             <p className="session__export-note">
-              {chop.chop_count} slices · pitch {chop.pitch_semitones ?? 0} st · tempo ×
-              {chop.tempo_ratio ?? 1}
+              {t("session.chopDetail", {
+                count: chop.chop_count,
+                pitch: chop.pitch_semitones ?? 0,
+                ratio: chop.tempo_ratio ?? 1,
+              })}
             </p>
           </div>
         )}
 
         {stemSession && (
           <div className="session__export">
-            <span className="session__label">Stem export</span>
+            <span className="session__label">{t("session.stemExport")}</span>
             <p className="session__export-path">{stemSession}</p>
             {stemFiles && stemFiles.length > 0 && (
               <ul className="session__stems">
@@ -102,24 +122,24 @@ export default function SessionView({
               </ul>
             )}
             <button type="button" className="cta cta--ghost cta--small" onClick={() => openPath(stemSession)}>
-              Open stems folder
+              {t("session.openStems")}
             </button>
           </div>
         )}
 
         {blueprint && (
           <div className="session__export">
-            <span className="session__label">Mix blueprint</span>
+            <span className="session__label">{t("session.mixBlueprint")}</span>
             <p className="session__export-path">READ_ME_IMBA.txt</p>
             <button type="button" className="cta cta--ghost cta--small" onClick={() => openPath(blueprint)}>
-              Open mix guide
+              {t("session.openMixGuide")}
             </button>
           </div>
         )}
 
         {status?.sample_picks && Object.keys(status.sample_picks).length > 0 && (
           <div className="session__kit">
-            <span className="session__label">Matched kit</span>
+            <span className="session__label">{t("session.matchedKit")}</span>
             <ul>
               {Object.entries(status.sample_picks).map(([role, name]) => (
                 <li key={role}>
@@ -147,15 +167,28 @@ export default function SessionView({
             onClick={onOpenInFl}
             disabled={!beatReady || busy}
           >
-            {busy ? "…" : "Open in FL Studio"}
+            {busy ? "…" : t("session.openInFl")}
           </button>
+          {beatReady && onRegenerate && (
+            <button
+              type="button"
+              className="cta cta--ghost cta--ghost-ready session__regen"
+              onClick={onRegenerate}
+              disabled={busy}
+              title={t("regenerate.minusOne")}
+            >
+              <IconRegenerate />
+              <span>{t("regenerate.button")}</span>
+              <span className="session__regen-cost">{t("regenerate.minusOne")}</span>
+            </button>
+          )}
           <button
             type="button"
             className={`cta cta--ghost ${canCreate ? "cta--ghost-ready" : ""}`}
             onClick={onCreate}
             disabled={!canCreate}
           >
-            {busy ? "Генерация…" : "New beat"}
+            {busy ? t("home.generating") : t("session.newBeat")}
           </button>
         </div>
       </div>

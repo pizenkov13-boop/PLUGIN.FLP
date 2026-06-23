@@ -1,0 +1,257 @@
+.page {
+  max-width: 720px;
+}
+
+.page--loading {
+  color: var(--text-3);
+  padding: 24px 0;
+}
+
+.page__head h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.page__head p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.page__card {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page__card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.page__card-desc {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.page__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.page__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.page__stat {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+.page__stat strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.page__stat span {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.page__path {
+  font-size: 12px;
+  color: var(--text-2);
+  word-break: break-all;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.page__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+}
+
+.page__pill--ok {
+  color: #7dffb8;
+  border-color: rgba(125, 255, 184, 0.25);
+  background: rgba(125, 255, 184, 0.08);
+}
+
+.page__pill--warn {
+  color: #ffd27d;
+  border-color: rgba(255, 210, 125, 0.25);
+  background: rgba(255, 210, 125, 0.08);
+}
+
+.page__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  color: #ffb4b4;
+  font-size: 13px;
+}
+
+.page__success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(125, 255, 184, 0.08);
+  border: 1px solid rgba(125, 255, 184, 0.2);
+  color: #b8ffd8;
+  font-size: 13px;
+}
+
+.page__btn {
+  appearance: none;
+  border: none;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.page__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page__btn--ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+
+.page__btn--ghost:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
+.page__btn--danger {
+  border: 1px solid rgba(255, 80, 80, 0.35);
+  background: rgba(255, 80, 80, 0.12);
+  color: #ffb4b4;
+}
+
+.page__btn--danger:hover:not(:disabled) {
+  background: rgba(255, 80, 80, 0.2);
+}
+
+.page__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page__list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+.page__list-item strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.page__list-item span {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.page__faq {
+  gap: 0;
+}
+
+.page__faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.page__faq-item:last-child {
+  border-bottom: none;
+}
+
+.page__faq-q {
+  width: 100%;
+  text-align: left;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.page__faq-q:hover {
+  color: var(--accent);
+}
+
+.page__faq-a {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.settings__feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.settings__feedback textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}

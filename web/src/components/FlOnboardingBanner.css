@@ -1,0 +1,36 @@
+.fl-onboard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.fl-onboard__body strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.fl-onboard__body p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.fl-onboard__meta {
+  margin-top: 6px !important;
+  color: var(--text-3) !important;
+}
+
+.fl-onboard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

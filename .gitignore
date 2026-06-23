@@ -31,6 +31,8 @@ dist/
 
 # Per-user quota (subscription period)
 beat_quota.json
+plg_cloud_session.json
+plg_device.json
 
 # User library (audio + midi + presets + projects + plugins)
 PLG_Library/

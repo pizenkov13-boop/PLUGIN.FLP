@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "system_tags": {
+    "OPIUM": {
+      "en": ["opium", "carti", "playboi", "ken carson", "f1lthy", "filthy", "star boy"],
+      "ru": ["опиум", "карти", "кен карсон", "филти", "звезда"],
+      "es": ["opio", "oscuro opium", "carti"],
+      "pt": ["ópio", "carti", "sombrio"],
+      "zh": ["鸦片", "黑暗", "卡特"],
+      "ja": ["オピウム", "カーティ", "暗い"],
+      "fr": ["opium", "carti", "sombre"],
+      "de": ["opium", "carti", "dunkel"],
+      "ar": ["أوبيوم", "كارتي", "مظلم"]
+    },
+    "RAGE": {
+      "en": ["rage", "rage beat", "destroy", "distorted lead", "hyperpop"],
+      "ru": ["рейдж", "ярость", "разъеб", "искажённый"],
+      "es": ["rabia", "rage", "distorsionado"],
+      "pt": ["raiva", "rage", "distorcido"],
+      "zh": ["愤怒", "狂暴", "失真"],
+      "ja": ["レイジ", "怒り", "歪み"],
+      "fr": ["rage", "colère", "distorsion"],
+      "de": ["wut", "rage", "verzerrt"],
+      "ar": ["غضب", "رايج", "مشوه"]
+    },
+    "PHONK": {
+      "en": ["phonk", "drift", "memphis", "cowbell", "sigma"],
+      "ru": ["фонк", "дрифт", "мемфис", "ковбелл"],
+      "es": ["phonk", "drift", "memphis"],
+      "pt": ["phonk", "drift", "memphis"],
+      "zh": ["漂移", "孟菲斯", "牛铃"],
+      "ja": ["フォンク", "ドリフト", "メンフィス"],
+      "fr": ["phonk", "drift", "memphis"],
+      "de": ["phonk", "drift", "memphis"],
+      "ar": ["فونك", "انجراف", "ممفيس"]
+    },
+    "METRO": {
+      "en": ["metro", "travis", "atmospheric", "spacey"],
+      "ru": ["метро", "трэвис", "атмосферный"],
+      "es": ["metro", "travis", "atmosférico"],
+      "pt": ["metro", "travis", "atmosférico"],
+      "zh": ["地铁", "特拉维斯", "氛围"],
+      "ja": ["メトロ", "トラヴィス", "雰囲気"],
+      "fr": ["metro", "travis", "atmosphérique"],
+      "de": ["metro", "travis", "atmosphärisch"],
+      "ar": ["مترو", "ترافيس", "جوي"]
+    },
+    "PLUGGNB": {
+      "en": ["pluggnb", "plugg", "airy", "dreamy", "soft"],
+      "ru": ["плагг", "воздушный", "мечтательный"],
+      "es": ["pluggnb", "etéreo", "suave"],
+      "pt": ["pluggnb", "etéreo", "suave"],
+      "zh": ["空气", "梦幻", "轻柔"],
+      "ja": ["プラグ", "エアリー", "夢幻"],
+      "fr": ["pluggnb", "aérien", "doux"],
+      "de": ["pluggnb", "luftig", "weich"],
+      "ar": ["ناعم", "حالم", "هوائي"]
+    },
+    "DETROIT": {
+      "en": ["detroit", "donk", "flint"],
+      "ru": ["детройт", "донк"],
+      "es": ["detroit", "donk"],
+      "pt": ["detroit", "donk"],
+      "zh": ["底特律", "东克"],
+      "ja": ["デトロイト", "ドンク"],
+      "fr": ["detroit", "donk"],
+      "de": ["detroit", "donk"],
+      "ar": ["ديترويت", "دونك"]
+    }
+  },
+  "mood_words": {
+    "dark": {
+      "en": ["dark", "eerie", "evil", "horror"],
+      "ru": ["мрачный", "злой", "жуткий", "тёмный"],
+      "es": ["oscuro", "siniestro"],
+      "pt": ["escuro", "sinistro"],
+      "zh": ["黑暗", "阴森", "诡异"],
+      "ja": ["暗い", "不気味"],
+      "fr": ["sombre", "sinistre"],
+      "de": ["dunkel", "unheimlich"],
+      "ar": ["مظلم", "مرعب"]
+    },
+    "hard": {
+      "en": ["hard", "heavy", "aggressive", "808"],
+      "ru": ["жёсткий", "тяжёлый", "агрессивный"],
+      "es": ["duro", "pesado"],
+      "pt": ["pesado", "agressivo"],
+      "zh": ["硬", "重", "激烈"],
+      "ja": ["ハード", "重い"],
+      "fr": ["dur", "lourd"],
+      "de": ["hart", "schwer"],
+      "ar": ["قاسي", "ثقيل"]
+    },
+    "fast": {
+      "en": ["fast", "upbeat", "energetic"],
+      "ru": ["быстрый", "энергичный"],
+      "es": ["rápido", "energético"],
+      "pt": ["rápido", "energético"],
+      "zh": ["快", "激烈"],
+      "ja": ["速い", "エネルギッシュ"],
+      "fr": ["rapide", "énergique"],
+      "de": ["schnell", "energisch"],
+      "ar": ["سريع", "نشيط"]
+    },
+    "distorted": {
+      "en": ["distorted", "crushed", "overdrive", "filth"],
+      "ru": ["искажённый", "перегруз", "грязный"],
+      "es": ["distorsionado"],
+      "pt": ["distorcido"],
+      "zh": ["失真", "过载"],
+      "ja": ["歪み", "ドライブ"],
+      "fr": ["distorsion"],
+      "de": ["verzerrt"],
+      "ar": ["مشوه", "مضغوط"]
+    }
+  }
+}
