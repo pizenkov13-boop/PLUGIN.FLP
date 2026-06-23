@@ -408,7 +408,7 @@ def billing_checkout(
     client = service_client()
     enforce_not_banned(client, user_id=user_id, ip=client_ip(request))
     tier = resolve_price_tier(body.price_tier, accept_language)
-    provider = pick_checkout_provider(tier)
+    provider = pick_checkout_provider(tier, client=client)
     if provider == "yookassa":
         out = yookassa_provider.create_checkout(user_id, tier)
     elif provider == "stripe":

@@ -49,6 +49,16 @@ export type Messages = {
     flOpened: string;
     generationFailed: string;
   };
+  errors: {
+    network: string;
+    auth: string;
+    quota: string;
+    subscription: string;
+    device: string;
+    validation: string;
+    config: string;
+    account: string;
+  };
   offline: {
     title: string;
     desc: string;
@@ -293,8 +303,9 @@ export type Messages = {
 /** Locale files may omit keys merged from `en` at runtime. */
 export type LocalePack = Omit<
   Messages,
-  "help" | "settings" | "auth" | "offline" | "regenerate" | "flOnboard" | "updates"
+  "help" | "settings" | "auth" | "offline" | "regenerate" | "flOnboard" | "updates" | "errors"
 > & {
+  errors?: Partial<Messages["errors"]>;
   auth?: Partial<Messages["auth"]>;
   help?: Partial<Messages["help"]>;
   settings?: Partial<Messages["settings"]>;

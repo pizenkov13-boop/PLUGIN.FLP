@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getSettings, importKitFolder, pickFolder, revealPath, scanLibrary } from "../api";
 import type { ApiResult } from "../types";
 import { useI18n } from "../i18n";
+import { apiErrorMessage } from "../errors";
 import "./PageView.css";
 
 type ScanData = ApiResult & {
@@ -34,7 +35,7 @@ export default function LibraryView() {
     const result = (await scanLibrary()) as ScanData;
     setScanning(false);
     if (!result.ok) {
-      setError(result.error ?? t("library.scanFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setScan(result);
@@ -46,7 +47,7 @@ export default function LibraryView() {
     setMessage(null);
     const pick = await pickFolder();
     if (!pick.ok) {
-      if (!pick.cancelled) setError(pick.error ?? t("library.pickFailed"));
+      if (!pick.cancelled) setError(apiErrorMessage(pick, t));
       return;
     }
     if (!pick.path) return;
@@ -55,7 +56,7 @@ export default function LibraryView() {
     const result = await importKitFolder(pick.path);
     setImporting(false);
     if (!result.ok) {
-      setError(result.error ?? t("library.importFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("library.importFailed"));

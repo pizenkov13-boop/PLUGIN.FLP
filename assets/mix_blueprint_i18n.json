@@ -30,7 +30,16 @@
     "bass_trap": "Light Fast Dist drive, low-cut 25 Hz. Glide between roots: Scripts → PLG 808 Glide.",
     "melody_line": "Fruity Reverb 2 — plate, decay 1.8 s, mix 12–18%. EQ cut 300–450 Hz, boost 8 kHz +1.5 dB for air. Leave gaps every 2 bars for vocals.",
     "master_opium": "Fruity Soft Clipper on Master — Post-Gain +2…+3 dB. Limiter ceiling -0.3 dB, low-cut 25 Hz. Opium = louder bass, airy top.",
-    "master_trap": "Light soft clip, sensible LUFS — keep dynamics for vocals."
+    "master_trap": "Light soft clip, sensible LUFS — keep dynamics for vocals.",
+    "step_filth_master": "Master: Fruity Soft Clipper, Post-Gain +3 dB (Opium loudness).",
+    "step_filth_808": "808 channel: Blood Overdrive ~15% or Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare already shifted 2–5 ms early — don't re-quantize to grid.",
+    "step_hat_6db": "6 dB rule: hats quieter than clap — don't boost hat velocity manually.",
+    "step_hat_choke": "Open Hat Choke: closed hat cuts open tail (choke group plg_hats).",
+    "step_808_attack": "808 attack +12 ms — kick hits first, bass follows without click.",
+    "step_sidechain": "Sidechain 808 ~40% on each kick (see plg_producer_meta.sidechain).",
+    "step_stems": "Drag Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid to separate mixer channels.",
+    "step_pitch_bend": "Pitch bend −2 st every 8 bars on melody — already in Melody.mid."
   },
   "ru": {
     "title": "PLG — READ_ME_IMBA.txt  |  FL Studio Blueprint",
@@ -63,7 +72,16 @@
     "bass_trap": "Лёгкий Fast Dist, low-cut 25 Hz. Glide: Scripts → PLG 808 Glide.",
     "melody_line": "Reverb plate 1.8 s, mix 12–18%. EQ cut 300–450 Hz, boost 8 kHz. Дыры каждые 2 такта под вокал.",
     "master_opium": "Soft Clipper на Master +2…+3 dB. Limiter -0.3 dB. Opium = бас громче, верх воздушный.",
-    "master_trap": "Мягкий клип, оставь динамику под вокал."
+    "master_trap": "Мягкий клип, оставь динамику под вокал.",
+    "step_filth_master": "Master: Fruity Soft Clipper, Post-Gain +3 dB (Opium loudness).",
+    "step_filth_808": "808 channel: Blood Overdrive ~15% или Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare уже сдвинуты на 2–5 ms раньше — не квантуй обратно в сетку.",
+    "step_hat_6db": "6 dB rule: хэты тише клэпа — не поднимай velocity хэтов вручную.",
+    "step_hat_choke": "Open Hat Choke: закрытый хэт режет хвост открытого (choke group plg_hats).",
+    "step_808_attack": "808 attack +12 ms — кик бьёт первым, бас подхватывает без щелчка.",
+    "step_sidechain": "Sidechain 808 ~40% на каждый kick (см. plg_producer_meta.sidechain).",
+    "step_stems": "Перетащи Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid на отдельные каналы микшера.",
+    "step_pitch_bend": "Pitch bend −2 st каждые 8 тактов на мелодии — уже в Melody.mid."
   },
   "fr": {
     "title": "PLG — READ_ME_IMBA.txt  |  Blueprint FL Studio",
@@ -96,7 +114,16 @@
     "bass_trap": "Fast Dist léger, low-cut 25 Hz. Glide via Scripts PLG.",
     "melody_line": "Reverb plate 1,8 s. Couper 300–450 Hz, boost 8 kHz. Laisser des trous pour les vocaux.",
     "master_opium": "Soft Clipper Master +2…+3 dB. Limiter -0,3 dB.",
-    "master_trap": "Clip léger, garde la dynamique pour les vocaux."
+    "master_trap": "Clip léger, garde la dynamique pour les vocaux.",
+    "step_filth_master": "Master : Fruity Soft Clipper, Post-Gain +3 dB (loudness Opium).",
+    "step_filth_808": "Canal 808 : Blood Overdrive ~15 % ou Fast Dist drive 88 %.",
+    "step_pre_snare": "Clap/Snare déjà avancés de 2–5 ms — ne re-quantise pas sur la grille.",
+    "step_hat_6db": "Règle des 6 dB : chapeaux plus bas que le clap — ne monte pas la velocity à la main.",
+    "step_hat_choke": "Open Hat Choke : le chapeau fermé coupe la queue de l'ouvert (groupe plg_hats).",
+    "step_808_attack": "Attack 808 +12 ms — le kick frappe en premier, la basse suit sans clic.",
+    "step_sidechain": "Sidechain 808 ~40 % sur chaque kick (voir plg_producer_meta.sidechain).",
+    "step_stems": "Glisse Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid sur des pistes séparées.",
+    "step_pitch_bend": "Pitch bend −2 st toutes les 8 mesures sur la mélodie — déjà dans Melody.mid."
   },
   "ja": {
     "title": "PLG — READ_ME_IMBA.txt  |  FL Studio ブループリント",
@@ -129,7 +156,16 @@
     "bass_trap": "軽い Fast Dist、25 Hz LC。Scripts → PLG 808 Glide。",
     "melody_line": "Reverb plate 1.8 s。300–450 Hz カット、8 kHz ブースト。2 小節ごとに隙間。",
     "master_opium": "Master Soft Clipper +2…+3 dB。Limiter -0.3 dB。",
-    "master_trap": "軽いクリップ、ボーカル用ダイナミクスを残す。"
+    "master_trap": "軽いクリップ、ボーカル用ダイナミクスを残す。",
+    "step_filth_master": "Master: Fruity Soft Clipper、Post-Gain +3 dB（Opiumラウドネス）。",
+    "step_filth_808": "808チャンネル: Blood Overdrive ~15% または Fast Dist drive 88%。",
+    "step_pre_snare": "Clap/Snareは既に2–5 ms早い — グリッドに戻さない。",
+    "step_hat_6db": "6 dBルール: ハットはクラップより静か — velocityを手で上げない。",
+    "step_hat_choke": "Open Hat Choke: クローズドがオープンのテールを切る（plg_hats）。",
+    "step_808_attack": "808 attack +12 ms — キックが先、ベースはクリックなしで続く。",
+    "step_sidechain": "各キックで808を~40%サイドチェイン（plg_producer_meta.sidechain参照）。",
+    "step_stems": "Kick.mid、808_Bass.mid、HiHats.mid、Melody.midを別ミキサーチャンネルへ。",
+    "step_pitch_bend": "メロディに8小節ごとピッチベンド −2 st — Melody.midに入済み。"
   },
   "zh": {
     "title": "PLG — READ_ME_IMBA.txt  |  FL Studio 混音指南",
@@ -162,7 +198,16 @@
     "bass_trap": "轻度 Fast Dist，25 Hz 低切。Scripts → PLG 808 Glide。",
     "melody_line": "Plate 混响 1.8 s。切除 300–450 Hz，8 kHz 提升。每 2 小节留空。",
     "master_opium": "总线 Soft Clipper +2…+3 dB。限制器 -0.3 dB。",
-    "master_trap": "轻度削波，为人声保留动态。"
+    "master_trap": "轻度削波，为人声保留动态。",
+    "step_filth_master": "主轨：Fruity Soft Clipper，Post-Gain +3 dB（Opium响度）。",
+    "step_filth_808": "808 通道：Blood Overdrive ~15% 或 Fast Dist drive 88%。",
+    "step_pre_snare": "Clap/Snare 已提前 2–5 ms — 不要重新量化到网格。",
+    "step_hat_6db": "6 dB 规则：帽镲比 clap 更轻 — 不要手动提高帽镲 velocity。",
+    "step_hat_choke": "Open Hat Choke：闭合帽镲切断开放帽镲尾音（plg_hats 组）。",
+    "step_808_attack": "808 attack +12 ms — kick 先出，低音跟上无咔哒声。",
+    "step_sidechain": "每个 kick 对 808 约 40% 侧链（见 plg_producer_meta.sidechain）。",
+    "step_stems": "将 Kick.mid、808_Bass.mid、HiHats.mid、Melody.mid 拖到独立混音通道。",
+    "step_pitch_bend": "旋律每 8 小节弯音 −2 半音 — 已在 Melody.mid 中。"
   },
   "ar": {
     "title": "PLG — READ_ME_IMBA.txt  |  مخطط FL Studio",
@@ -195,7 +240,16 @@
     "bass_trap": "Fast Dist خفيف، low-cut 25 Hz.",
     "melody_line": "Reverb plate 1.8 s. قطع 300–450 Hz. فراغ كل موسيقتين للغناء.",
     "master_opium": "Soft Clipper على الماستر +2…+3 dB.",
-    "master_trap": "قص خفيف، احتفظ بالديناميك للغناء."
+    "master_trap": "قص خفيف، احتفظ بالديناميك للغناء.",
+    "step_filth_master": "الماستر: Fruity Soft Clipper، Post-Gain +3 dB (صوت Opium).",
+    "step_filth_808": "قناة 808: Blood Overdrive ~15% أو Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare متقدمة 2–5 ms — لا تعيد الكم على الشبكة.",
+    "step_hat_6db": "قاعدة 6 dB: الهات أهدأ من الكلاب — لا ترفع velocity يدوياً.",
+    "step_hat_choke": "Open Hat Choke: الهات المغلق يقطع ذيل المفتوح (مجموعة plg_hats).",
+    "step_808_attack": "808 attack +12 ms — الكيك أولاً، الباس يتابع بلا طقة.",
+    "step_sidechain": "Sidechain على 808 ~40% لكل kick (انظر plg_producer_meta.sidechain).",
+    "step_stems": "اسحب Kick.mid و808_Bass.mid وHiHats.mid وMelody.mid لقنوات منفصلة.",
+    "step_pitch_bend": "Pitch bend −2 st كل 8 bars على اللحن — موجود في Melody.mid."
   },
   "es": {
     "title": "PLG — READ_ME_IMBA.txt  |  Blueprint FL Studio",
@@ -228,7 +282,16 @@
     "bass_trap": "Fast Dist suave, low-cut 25 Hz.",
     "melody_line": "Reverb plate 1.8 s. Corte 300–450 Hz. Huecos cada 2 compases.",
     "master_opium": "Soft Clipper Master +2…+3 dB.",
-    "master_trap": "Clip suave, dinámica para vocales."
+    "master_trap": "Clip suave, dinámica para vocales.",
+    "step_filth_master": "Master: Fruity Soft Clipper, Post-Gain +3 dB (loudness Opium).",
+    "step_filth_808": "Canal 808: Blood Overdrive ~15% o Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare ya adelantados 2–5 ms — no re-cuantices a la cuadrícula.",
+    "step_hat_6db": "Regla 6 dB: hi-hats más bajos que el clap — no subas velocity a mano.",
+    "step_hat_choke": "Open Hat Choke: el hat cerrado corta la cola del abierto (grupo plg_hats).",
+    "step_808_attack": "808 attack +12 ms — el kick primero, el bajo sigue sin clic.",
+    "step_sidechain": "Sidechain 808 ~40% en cada kick (ver plg_producer_meta.sidechain).",
+    "step_stems": "Arrastra Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid a canales separados.",
+    "step_pitch_bend": "Pitch bend −2 st cada 8 compases en la melodía — ya en Melody.mid."
   },
   "pt": {
     "title": "PLG — READ_ME_IMBA.txt  |  Blueprint FL Studio",
@@ -261,7 +324,16 @@
     "bass_trap": "Fast Dist leve, low-cut 25 Hz.",
     "melody_line": "Reverb plate 1.8 s. Corte 300–450 Hz. Espaços a cada 2 compassos.",
     "master_opium": "Soft Clipper Master +2…+3 dB.",
-    "master_trap": "Clip leve, dinâmica para vocais."
+    "master_trap": "Clip leve, dinâmica para vocais.",
+    "step_filth_master": "Master: Fruity Soft Clipper, Post-Gain +3 dB (loudness Opium).",
+    "step_filth_808": "Canal 808: Blood Overdrive ~15% ou Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare já adiantados 2–5 ms — não re-quantize na grade.",
+    "step_hat_6db": "Regra 6 dB: chapeus mais baixos que o clap — não aumente velocity manualmente.",
+    "step_hat_choke": "Open Hat Choke: hat fechado corta a cauda do aberto (grupo plg_hats).",
+    "step_808_attack": "808 attack +12 ms — kick primeiro, baixo segue sem estalo.",
+    "step_sidechain": "Sidechain 808 ~40% em cada kick (ver plg_producer_meta.sidechain).",
+    "step_stems": "Arraste Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid para canais separados.",
+    "step_pitch_bend": "Pitch bend −2 st a cada 8 compassos na melodia — já em Melody.mid."
   },
   "de": {
     "title": "PLG — READ_ME_IMBA.txt  |  FL Studio Blueprint",
@@ -294,6 +366,15 @@
     "bass_trap": "Leichter Fast Dist, Low-Cut 25 Hz.",
     "melody_line": "Reverb Plate 1,8 s. Cut 300–450 Hz. Lücken alle 2 Takte.",
     "master_opium": "Master Soft Clipper +2…+3 dB.",
-    "master_trap": "Leichter Clip, Dynamik für Vocals."
+    "master_trap": "Leichter Clip, Dynamik für Vocals.",
+    "step_filth_master": "Master: Fruity Soft Clipper, Post-Gain +3 dB (Opium-Lautheit).",
+    "step_filth_808": "808-Kanal: Blood Overdrive ~15% oder Fast Dist drive 88%.",
+    "step_pre_snare": "Clap/Snare bereits 2–5 ms früher — nicht zurück aufs Raster quantisieren.",
+    "step_hat_6db": "6-dB-Regel: Hats leiser als Clap — Velocity nicht manuell anheben.",
+    "step_hat_choke": "Open Hat Choke: geschlossener Hat schneidet Open-Tail (Gruppe plg_hats).",
+    "step_808_attack": "808 attack +12 ms — Kick zuerst, Bass folgt ohne Klick.",
+    "step_sidechain": "Sidechain 808 ~40% auf jeden Kick (siehe plg_producer_meta.sidechain).",
+    "step_stems": "Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid auf separate Mixer-Kanäle ziehen.",
+    "step_pitch_bend": "Pitch bend −2 st alle 8 Takte auf Melodie — bereits in Melody.mid."
   }
 }

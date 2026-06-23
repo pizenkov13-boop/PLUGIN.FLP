@@ -34,6 +34,7 @@ const MESSAGES: Record<Locale, Messages> = Object.fromEntries(
       auth: { ...en.auth, ...pack.auth },
       settings: { ...en.settings, ...pack.settings },
       offline: { ...en.offline, ...pack.offline },
+      errors: { ...en.errors, ...(pack as { errors?: Partial<Messages["errors"]> }).errors },
       regenerate: { ...en.regenerate, ...pack.regenerate },
       flOnboard: { ...en.flOnboard, ...pack.flOnboard },
       updates: { ...en.updates, ...pack.updates },

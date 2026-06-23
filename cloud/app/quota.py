@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -10,6 +11,9 @@ from supabase import Client
 
 from cloud.app.billing import apply_grace_expiry, billing_snapshot, trial_remaining
 from cloud.app.config import BEAT_LIMIT, DAILY_BEAT_LIMIT, PERIOD_DAYS, TRIAL_BEATS
+
+
+logger = logging.getLogger("plg.quota")
 
 
 def _utc_today() -> date:
@@ -115,6 +119,7 @@ def ensure_can_generate(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def consume_beat(client: Client, user_id: str, row: dict[str, Any]) -> dict[str, Any]:
+    before = quota_snapshot(row)
     row = ensure_can_generate(row)
     status = str(row.get("status") or "expired")
     now = datetime.now(timezone.utc).isoformat()
@@ -139,7 +144,41 @@ def consume_beat(client: Client, user_id: str, row: dict[str, Any]) -> dict[str,
         "updated_at": now,
     }
     client.table("profiles").update(update).eq("id", user_id).execute()
-    return quota_snapshot(row)
+    snap = quota_snapshot(row)
+    _maybe_notify_quota_limit(client, user_id, before, snap)
+    return snap
+
+
+def _maybe_notify_quota_limit(
+    client: Client,
+    user_id: str,
+    before: dict[str, Any],
+    after: dict[str, Any],
+) -> None:
+    try:
+        from cloud.app.email import notify_quota_limit
+        from cloud.app.legal import _user_email
+
+        email = _user_email(client, user_id)
+        if not email:
+            return
+        if int(before.get("daily_remaining") or 0) > 0 and int(after.get("daily_remaining") or 0) == 0:
+            notify_quota_limit(client, user_id, email, daily=True)
+        status = str(after.get("status") or "")
+        if (
+            status in ("active", "grace")
+            and int(before.get("remaining") or 0) > 0
+            and int(after.get("remaining") or 0) == 0
+        ):
+            notify_quota_limit(
+                client,
+                user_id,
+                email,
+                daily=False,
+                days=int(after.get("days_until_reset") or 0),
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("quota limit email failed user=%s", user_id)
 
 
 def save_profile(client: Client, user_id: str, row: dict[str, Any]) -> None:

@@ -14,6 +14,7 @@ import {
 } from "../api";
 import type { JobSnapshot, Status } from "../types";
 import { useI18n } from "../i18n";
+import { apiErrorMessage, jobErrorMessage } from "../errors";
 import "./PageView.css";
 
 export default function ToolsView() {
@@ -44,7 +45,7 @@ export default function ToolsView() {
     setError(null);
     const pick = await pickAudioFile();
     if (!pick.ok) {
-      if (!pick.cancelled) setError(pick.error ?? t("library.pickFailed"));
+      if (!pick.cancelled) setError(apiErrorMessage(pick, t));
       return;
     }
     setStemFile(pick.path ?? null);
@@ -60,7 +61,7 @@ export default function ToolsView() {
       const handle = await startStemSplit(stemFile);
       const final = await pollJob(handle.job_id, onStemUpdate);
       if (final.status === "error") {
-        setError(final.error ?? t("common.error"));
+        setError(jobErrorMessage(final, t));
         setStemLine("");
       } else {
         const out = final.result as { output_dir?: string; message?: string } | null;
@@ -80,7 +81,7 @@ export default function ToolsView() {
     const result = await installFlScripts();
     setBusy(false);
     if (!result.ok) {
-      setError(result.error ?? t("settings.installFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("settings.scriptsInstalled"));
@@ -95,7 +96,7 @@ export default function ToolsView() {
     const result = await bakeSession();
     setBusy(false);
     if (!result.ok) {
-      setError(result.error ?? t("common.error"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("common.updated"));
@@ -109,7 +110,7 @@ export default function ToolsView() {
     const result = await scanLibrary();
     setBusy(false);
     if (!result.ok) {
-      setError(result.error ?? t("library.scanFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(t("tools.libraryCount", { count: Number(result.audio_total ?? 0) }));
@@ -126,7 +127,7 @@ export default function ToolsView() {
     const result = await importKitFolder(pick.path);
     setBusy(false);
     if (!result.ok) {
-      setError(result.error ?? t("library.importFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("common.updated"));

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
 
+from cloud.app.email_cron import run_subscription_expiry_reminders
 from cloud.app.feedback import submit_feedback
 from cloud.app.status_page import status_payload
 
@@ -44,3 +46,19 @@ def test_submit_feedback_ok():
         )
     assert result["ok"] is True
     client.table.assert_called_with("feedback_submissions")
+
+
+def test_subscription_expiry_reminder_sends():
+    client = MagicMock()
+    ends = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    client.table.return_value.select.return_value.in_.return_value.gte.return_value.lt.return_value.execute.return_value = MagicMock(
+        data=[{"id": "u1", "status": "active", "subscription_ends_at": ends}]
+    )
+    client.table.return_value.select.return_value.eq.return_value.eq.return_value.eq.return_value.gte.return_value.contains.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[]
+    )
+    with patch("cloud.app.email_cron._user_email", return_value="user@test.com"):
+        with patch("cloud.app.email_cron.notify_subscription_expiring", return_value=True) as notify:
+            result = run_subscription_expiry_reminders(client, warn_days=(3,))
+    assert result["sent"] == 1
+    notify.assert_called_once()

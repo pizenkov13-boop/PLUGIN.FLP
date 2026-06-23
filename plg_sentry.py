@@ -6,6 +6,8 @@ import logging
 import os
 import sys
 
+from app_config import app_version
+
 logger = logging.getLogger("plg.sentry")
 
 _HOOKED = False
@@ -24,7 +26,7 @@ def init_desktop_sentry() -> None:
         return
 
     environment = os.getenv("PLG_ENV", "desktop")
-    release = os.getenv("PLG_APP_VERSION", "1.0.0")
+    release = app_version()
 
     sentry_sdk.init(
         dsn=dsn,

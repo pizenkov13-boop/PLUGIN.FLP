@@ -2,6 +2,7 @@ import { useState } from "react";
 import { bakeSession, chaosRoll, flipBeat, setFilthMode } from "../api";
 import type { ApiResult } from "../types";
 import { useI18n } from "../i18n";
+import { apiErrorMessage } from "../errors";
 import "./ProducerConsole.css";
 
 type Props = {
@@ -22,13 +23,13 @@ export default function ProducerConsole({
   const { t } = useI18n();
   const [toolBusy, setToolBusy] = useState(false);
 
-  async function run(action: () => Promise<ApiResult>, label: string) {
+  async function run(action: () => Promise<ApiResult>) {
     if (!beatReady || busy || toolBusy) return;
     setToolBusy(true);
     try {
       const result = await action();
       if (!result.ok) {
-        onError(result.error ?? `${label} failed`);
+        onError(apiErrorMessage(result, t));
         return;
       }
       onUpdated(result);
@@ -55,7 +56,7 @@ export default function ProducerConsole({
           type="button"
           className="console__btn console__btn--fire"
           disabled={locked}
-          onClick={() => run(bakeSession, "Bake")}
+          onClick={() => run(bakeSession)}
         >
           <span className="console__icon">⚡</span>
           <span>{t("console.bake")}</span>
@@ -65,7 +66,7 @@ export default function ProducerConsole({
           type="button"
           className="console__btn"
           disabled={locked}
-          onClick={() => run(flipBeat, "Flip")}
+          onClick={() => run(flipBeat)}
         >
           <span className="console__icon">🔀</span>
           <span>{t("console.flip")}</span>
@@ -75,7 +76,7 @@ export default function ProducerConsole({
           type="button"
           className="console__btn"
           disabled={locked}
-          onClick={() => run(chaosRoll, "Chaos")}
+          onClick={() => run(chaosRoll)}
         >
           <span className="console__icon">🎲</span>
           <span>{t("console.chaos")}</span>
@@ -85,7 +86,7 @@ export default function ProducerConsole({
           type="button"
           className={`console__btn console__btn--toggle ${filthMode ? "console__btn--on" : ""}`}
           disabled={locked}
-          onClick={() => run(() => setFilthMode(!filthMode), "Filth")}
+          onClick={() => run(() => setFilthMode(!filthMode))}
         >
           <span className="console__icon">🔌</span>
           <span>{filthMode ? t("console.filthOn") : t("console.filthRoute")}</span>

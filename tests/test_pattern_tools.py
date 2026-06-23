@@ -72,6 +72,13 @@ def test_blueprint_steps_nonempty(sample_pattern):
     assert all("id" in s and "text" in s for s in steps)
 
 
+def test_blueprint_steps_locale(sample_pattern):
+    pattern, _ = sample_pattern
+    en_steps = list_blueprint_steps(pattern, "en")
+    ru_steps = list_blueprint_steps(pattern, "ru")
+    assert en_steps[0]["text"] != ru_steps[0]["text"] or en_steps[0]["id"] == ru_steps[0]["id"]
+
+
 def test_load_missing_raises(tmp_path: Path):
     missing = tmp_path / "missing.json"
     with pytest.raises(PatternError):

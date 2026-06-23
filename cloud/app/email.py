@@ -55,13 +55,21 @@ def send_email(
     body: str,
     template: str,
     user_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> bool:
     if not to or "@" not in to:
         return False
 
     if not RESEND_API_KEY:
         logger.info("email skipped (no RESEND_API_KEY) to=%s template=%s", to, template)
-        _log_notification(client, user_id=user_id, template=template, recipient=to, status="queued")
+        _log_notification(
+            client,
+            user_id=user_id,
+            template=template,
+            recipient=to,
+            status="queued",
+            metadata=metadata,
+        )
         return False
 
     try:
@@ -79,9 +87,17 @@ def send_email(
                 recipient=to,
                 status="failed",
                 error=resp.text,
+                metadata=metadata,
             )
             return False
-        _log_notification(client, user_id=user_id, template=template, recipient=to, status="sent")
+        _log_notification(
+            client,
+            user_id=user_id,
+            template=template,
+            recipient=to,
+            status="sent",
+            metadata=metadata,
+        )
         return True
     except Exception as exc:  # noqa: BLE001
         _log_notification(
@@ -91,6 +107,7 @@ def send_email(
             recipient=to,
             status="failed",
             error=str(exc),
+            metadata=metadata,
         )
         return False
 
@@ -106,10 +123,23 @@ def notify_payment_success(client: Client, user_id: str, email: str) -> None:
     )
 
 
-def notify_quota_limit(client: Client, user_id: str, email: str, *, daily: bool, days: int = 0) -> None:
+def notify_subscription_expiring(client: Client, user_id: str, email: str, *, days: int) -> bool:
+    body = TEMPLATES["subscription_expiring"].format(days=days)
+    return send_email(
+        client,
+        to=email,
+        subject="PLUGIN.FLP — subscription ending soon",
+        body=body,
+        template="subscription_expiring",
+        user_id=user_id,
+        metadata={"days": days},
+    )
+
+
+def notify_quota_limit(client: Client, user_id: str, email: str, *, daily: bool, days: int = 0) -> bool:
     key = "quota_daily_limit" if daily else "quota_monthly_limit"
     body = TEMPLATES[key].format(days=days)
-    send_email(
+    return send_email(
         client,
         to=email,
         subject="PLUGIN.FLP — beat limit reached",

@@ -7,6 +7,8 @@ import os
 import uuid
 from typing import Any
 
+from app_config import app_version
+
 logger = logging.getLogger("plg.analytics")
 
 _distinct_id: str | None = None
@@ -41,7 +43,7 @@ def track(event: str, properties: dict[str, Any] | None = None) -> None:
             "distinct_id": _distinct_id_value(),
             "properties": {
                 **(properties or {}),
-                "app_version": os.getenv("PLG_APP_VERSION", "1.0.0"),
+                "app_version": app_version(),
                 "platform": "desktop",
             },
         }

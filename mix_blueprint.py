@@ -192,44 +192,45 @@ def session_slug(data: dict[str, Any]) -> str:
     return f"PLG_Stems_{bpm}bpm_{slug}"
 
 
-def list_blueprint_steps(data: dict[str, Any]) -> list[dict[str, str]]:
+def list_blueprint_steps(data: dict[str, Any], locale: str | None = None) -> list[dict[str, str]]:
     """Interactive producer checklist for the web UI."""
+    loc = locale or "en"
     steps: list[dict[str, str]] = []
     meta = data.get("plg_producer_meta") if isinstance(data.get("plg_producer_meta"), dict) else {}
 
     if data.get("plg_filth_mode") or meta.get("master_soft_clip"):
         steps.append({
             "id": "filth-master",
-            "text": "Master: Fruity Soft Clipper, Post-Gain +3 dB (Opium loudness).",
+            "text": blueprint_text(loc, "step_filth_master"),
         })
         steps.append({
             "id": "filth-808",
-            "text": "808 channel: Blood Overdrive ~15% или Fast Dist drive 88%.",
+            "text": blueprint_text(loc, "step_filth_808"),
         })
 
     steps.append({
         "id": "pre-snare",
-        "text": "Clap/Snare уже сдвинуты на 2–5 ms раньше — не квантуй обратно в сетку.",
+        "text": blueprint_text(loc, "step_pre_snare"),
     })
     steps.append({
         "id": "hat-6db",
-        "text": "6 dB rule: хэты тише клэпа — не поднимай velocity хэтов вручную.",
+        "text": blueprint_text(loc, "step_hat_6db"),
     })
     steps.append({
         "id": "hat-choke",
-        "text": "Open Hat Choke: закрытый хэт режет хвост открытого (choke group plg_hats).",
+        "text": blueprint_text(loc, "step_hat_choke"),
     })
     steps.append({
         "id": "808-attack",
-        "text": "808 attack +12 ms — кик бьёт первым, бас подхватывает без щелчка.",
+        "text": blueprint_text(loc, "step_808_attack"),
     })
     steps.append({
         "id": "sidechain",
-        "text": "Sidechain 808 ~40% на каждый kick (см. plg_producer_meta.sidechain).",
+        "text": blueprint_text(loc, "step_sidechain"),
     })
     steps.append({
         "id": "stems",
-        "text": "Перетащи Kick.mid, 808_Bass.mid, HiHats.mid, Melody.mid на отдельные каналы микшера.",
+        "text": blueprint_text(loc, "step_stems"),
     })
 
     for index, line in enumerate(data.get("manual_steps") or []):
@@ -238,7 +239,7 @@ def list_blueprint_steps(data: dict[str, Any]) -> list[dict[str, str]]:
     if data.get("pitch_bend_automation"):
         steps.append({
             "id": "pitch-bend",
-            "text": "Pitch bend −2 st каждые 8 тактов на мелодии — уже в Melody.mid.",
+            "text": blueprint_text(loc, "step_pitch_bend"),
         })
 
     seen: set[str] = set()

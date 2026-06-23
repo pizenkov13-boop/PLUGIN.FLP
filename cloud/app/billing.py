@@ -202,13 +202,20 @@ def cancel_subscription(client: Client, user_id: str) -> None:
     logger.info("subscription cancelled user=%s", user_id)
 
 
-def pick_checkout_provider(price_tier: str) -> str:
-    from cloud.app.config import PADDLE_API_KEY, STRIPE_SECRET_KEY, YOOKASSA_SECRET_KEY, YOOKASSA_SHOP_ID
+def pick_checkout_provider(price_tier: str, *, client: Client | None = None) -> str:
+    from cloud.app.config import PADDLE_API_KEY, STRIPE_PRICE_ID_INTL, STRIPE_SECRET_KEY, YOOKASSA_SECRET_KEY, YOOKASSA_SHOP_ID
 
     if price_tier == "cis":
         if YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY:
             return "yookassa"
         raise HTTPException(503, "ЮKassa not configured for CIS checkout.")
+    from cloud.app.feature_flags import flag_enabled
+
+    if client is None or not flag_enabled(client, "intl_billing", default=False):
+        raise HTTPException(
+            503,
+            "International billing is not available yet. CIS subscribers: use ₽ pricing.",
+        )
     if STRIPE_SECRET_KEY and STRIPE_PRICE_ID_INTL:
         return "stripe"
     if PADDLE_API_KEY:

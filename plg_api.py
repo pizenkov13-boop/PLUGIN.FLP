@@ -531,7 +531,7 @@ def get_producer_blueprint() -> dict[str, Any]:
     from pattern_tools import PatternError, get_producer_blueprint as _blueprint
 
     try:
-        return _blueprint()
+        return _blueprint(locale=_ui_locale)
     except PatternError as exc:
         return _err(str(exc), "no_beat")
 

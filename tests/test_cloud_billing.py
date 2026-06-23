@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from cloud.app.billing import (
     apply_grace_expiry,
     billing_snapshot,
+    pick_checkout_provider,
     price_label,
     resolve_price_tier,
     trial_remaining,
@@ -77,3 +80,10 @@ def test_quota_trial_uses_trial_limit():
     snap = quota_snapshot(_row(status="trial", trial_beats_used=0))
     assert snap["limit"] == 3
     assert snap["remaining"] == 3
+
+
+def test_intl_checkout_blocked_without_flag():
+    client = MagicMock()
+    with pytest.raises(HTTPException) as exc:
+        pick_checkout_provider("intl", client=client)
+    assert exc.value.status_code == 503

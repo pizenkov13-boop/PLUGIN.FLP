@@ -43,6 +43,16 @@ export const en: Messages = {
     flOpened: "FL Studio opened",
     generationFailed: "Generation failed.",
   },
+  errors: {
+    network: "Can't reach PLG Cloud — check your connection and try again.",
+    auth: "Session expired — sign in again.",
+    quota: "Beat limit reached — try again tomorrow or wait for your plan to reset.",
+    subscription: "Subscription inactive — renew in Settings to keep generating.",
+    device: "Too many devices on this account — remove one in Settings or contact support.",
+    validation: "Something in the request was invalid — try again.",
+    config: "App is not configured correctly — contact support.",
+    account: "Account action failed — try again or contact support.",
+  },
   offline: {
     title: "You're offline",
     desc: "PLG Cloud needs internet to generate beats. Your last session is still on disk.",

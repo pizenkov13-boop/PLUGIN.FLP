@@ -23,15 +23,8 @@ import TopBar from "./components/TopBar";
 import PlayerBar from "./components/PlayerBar";
 import OfflineBanner from "./components/OfflineBanner";
 import FlOnboardingBanner from "./components/FlOnboardingBanner";
+import { jobErrorMessage, resolveErrorType } from "./errors";
 import "./App.css";
-
-function jobErrorMessage(final: JobSnapshot, t: (k: string) => string): string {
-  const type = final.error_type || (final.result?.error_type as string | undefined);
-  if (type === "network" || type === "cloud") return t("offline.generationFailed");
-  if (type === "auth") return final.error ?? t("auth.title");
-  if (type === "quota" || type === "subscription") return final.error ?? t("status.generationFailed");
-  return final.error ?? t("status.generationFailed");
-}
 
 export default function App() {
   const { t, locale } = useI18n();
@@ -154,13 +147,8 @@ export default function App() {
       const handle = await startOpenInFl();
       const final = await pollJob(handle.job_id);
       if (final.status === "error") {
-        const type = final.error_type || (final.result?.error_type as string | undefined);
-        if (type === "fl_not_found") {
-          setError(t("flOnboard.openFailed"));
-          setView("settings");
-        } else {
-          setError(final.error ?? t("status.flError"));
-        }
+        setError(jobErrorMessage(final, t));
+        if (resolveErrorType(final) === "fl_not_found") setView("settings");
         setStatusLine(t("status.flError"));
       } else {
         const result = final.result as { message?: string } | null;

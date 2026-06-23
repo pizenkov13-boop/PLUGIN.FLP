@@ -27,7 +27,7 @@ function saveDone(sessionKey: string, done: Set<string>) {
 }
 
 export default function BlueprintChecklist({ beatReady, sessionKey }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [steps, setSteps] = useState<Step[]>([]);
   const [done, setDone] = useState<Set<string>>(() => loadDone(sessionKey));
 
@@ -40,7 +40,7 @@ export default function BlueprintChecklist({ beatReady, sessionKey }: Props) {
     if (data.ok && Array.isArray(data.steps)) {
       setSteps(data.steps as Step[]);
     }
-  }, [beatReady]);
+  }, [beatReady, locale]);
 
   useEffect(() => {
     setDone(loadDone(sessionKey));

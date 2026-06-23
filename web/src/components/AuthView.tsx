@@ -5,6 +5,7 @@ import type { ApiResult } from "../types";
 import { cloudLogin, cloudResetPassword, cloudSignup, getAuthStatus } from "../api";
 
 import { useI18n } from "../i18n";
+import { apiErrorMessage } from "../errors";
 
 import "./AuthView.css";
 
@@ -86,7 +87,7 @@ export default function AuthView({ onAuthed }: Props) {
 
     if (!result.ok) {
 
-      setError(result.error ?? "Auth failed.");
+      setError(apiErrorMessage(result, t));
 
       return;
 
@@ -126,7 +127,7 @@ export default function AuthView({ onAuthed }: Props) {
 
     if (!result.ok) {
 
-      setError(result.error ?? "Could not send reset email.");
+      setError(apiErrorMessage(result, t));
 
       return;
 

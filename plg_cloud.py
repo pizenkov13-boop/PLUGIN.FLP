@@ -8,12 +8,11 @@ from typing import Any
 
 import httpx
 
+from app_config import app_version
 from plg_device import get_device_id, get_device_name
 from plg_session_store import clear_session, load_session, save_session
 
 logger = logging.getLogger("plg.cloud")
-
-APP_VERSION = os.getenv("PLG_APP_VERSION", "1.0.0")
 
 
 def is_cloud_mode() -> bool:
@@ -40,7 +39,7 @@ def _auth_headers() -> dict[str, str]:
         raise RuntimeError("Not signed in.")
     return {
         "Authorization": f"Bearer {token}",
-        "X-PLG-Version": APP_VERSION,
+        "X-PLG-Version": app_version(),
         "X-PLG-Device": get_device_id(),
     }
 
@@ -87,7 +86,7 @@ def signup(
     with httpx.Client(timeout=30.0) as client:
         resp = client.post(
             f"{base}/v1/auth/signup",
-            headers={"X-PLG-Version": APP_VERSION, "Content-Type": "application/json"},
+            headers={"X-PLG-Version": app_version(), "Content-Type": "application/json"},
             json={
                 "email": email.strip(),
                 "password": password,
@@ -372,7 +371,7 @@ def fetch_status() -> dict[str, Any]:
         return {"ok": False, "error": "PLG_CLOUD_URL not configured.", "error_type": "config"}
     try:
         with httpx.Client(timeout=15.0) as client:
-            resp = client.get(f"{base}/v1/status", headers={"X-PLG-Version": APP_VERSION})
+            resp = client.get(f"{base}/v1/status", headers={"X-PLG-Version": app_version()})
             if resp.status_code >= 400:
                 return {"ok": False, "error": resp.text, "error_type": "cloud"}
             return {"ok": True, **resp.json()}

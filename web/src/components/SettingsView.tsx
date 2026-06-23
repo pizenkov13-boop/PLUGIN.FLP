@@ -18,6 +18,7 @@ import {
 } from "../api";
 import type { AppInfo, BillingInfo, Quota } from "../types";
 import { formatQuotaLabel, useI18n } from "../i18n";
+import { apiErrorMessage } from "../errors";
 import type { Locale } from "../i18n/types";
 import "./SettingsView.css";
 import "./PageView.css";
@@ -84,7 +85,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     });
     setSaving(false);
     if (!result.ok) {
-      setError(result.error ?? t("settings.saveFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(t("settings.saved"));
@@ -99,7 +100,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     const result = await installFlScripts();
     setInstalling(false);
     if (!result.ok) {
-      setError(result.error ?? t("settings.installFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("settings.scriptsInstalled"));
@@ -135,7 +136,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     const result = await cloudBillingCheckout(tier);
     setSubscribing(false);
     if (!result.ok) {
-      setError(result.error ?? t("settings.saveFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     const refreshed = await cloudBillingStatus();
@@ -149,7 +150,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     const result = await checkForUpdates();
     setCheckingUpdate(false);
     if (!result.ok) {
-      setError(result.error ?? t("updates.failed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     if (result.update_available) {
@@ -164,7 +165,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     const result = await downloadUpdate();
     setCheckingUpdate(false);
     if (!result.ok) {
-      setError(result.error ?? t("updates.failed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(result.message?.toString() ?? t("updates.download"));
@@ -173,7 +174,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
   async function onApplyUpdate() {
     const result = await applyDownloadedUpdate();
     if (!result.ok) {
-      setError(result.error ?? t("updates.failed"));
+      setError(apiErrorMessage(result, t));
     }
   }
 
@@ -189,7 +190,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
     );
     setFeedbackSending(false);
     if (!result.ok) {
-      setError(result.error ?? t("settings.feedbackFailed"));
+      setError(apiErrorMessage(result, t));
       return;
     }
     setMessage(t("settings.feedbackSent"));
@@ -293,7 +294,7 @@ export default function SettingsView({ onSaved, cloudMode, authEmail }: Props) {
               setError(null);
               const result = await cloudDeleteAccount();
               if (!result.ok) {
-                setError(result.error ?? t("settings.deleteFailed"));
+                setError(apiErrorMessage(result, t));
                 return;
               }
               onSaved();

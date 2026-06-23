@@ -199,12 +199,12 @@ def set_filth_mode(enabled: bool, pattern: dict[str, Any] | None = None) -> dict
     return result_payload(data, filth_mode=bool(enabled), **exports)
 
 
-def get_producer_blueprint() -> dict[str, Any]:
+def get_producer_blueprint(*, locale: str | None = None) -> dict[str, Any]:
     """Structured checklist steps for the interactive blueprint UI."""
     from mix_blueprint import list_blueprint_steps
 
     pattern = load_pattern()
-    steps = list_blueprint_steps(pattern)
+    steps = list_blueprint_steps(pattern, locale)
     return {
         "ok": True,
         "steps": steps,
