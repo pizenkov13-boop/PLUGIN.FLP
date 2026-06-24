@@ -678,6 +678,149 @@ def normalize_registers(pattern: dict[str, Any]) -> None:
     _clamp_octave(tracks.get("counter_melody") or [], *MELODY_REGISTER)
 
 
+def apply_melody_groove_lag(
+    notes: list[dict[str, Any]],
+    bpm: float,
+    ms: float,
+    rng: random.Random,
+) -> list[dict[str, Any]]:
+    """Lazy groove-lag — drag melody notes a few ms late off the grid for a
+    behind-the-beat feel (Groove-опоздание). Drums stay locked; only the melody
+    leans back, which is what makes the pocket feel human instead of robotic."""
+    if ms <= 0:
+        return [deepcopy(n) for n in notes]
+    out: list[dict[str, Any]] = []
+    for entry in notes:
+        note = deepcopy(entry)
+        lag = max(0.0, ms + rng.uniform(-2.0, 2.0))
+        note["time_step"] = round(_note_step(note) + ms_to_beats(lag, bpm), 5)
+        note["groove_lag_ms"] = round(lag, 2)
+        out.append(note)
+    return sorted(out, key=_note_step)
+
+
+def apply_chord_voicing_spread(
+    notes: list[dict[str, Any]],
+    rng: random.Random,
+    *,
+    chance: float,
+    register: tuple[int, int] = MELODY_REGISTER,
+) -> list[dict[str, Any]]:
+    """Open clustered chords — with ``chance`` probability per note, invert a tone
+    by an octave (kept inside the melody register) so triads breathe and leave
+    mid-range space for a vocal, instead of a tight cramped block chord."""
+    if chance <= 0:
+        return [deepcopy(n) for n in notes]
+    lo, hi = register
+    out: list[dict[str, Any]] = []
+    for entry in notes:
+        note = deepcopy(entry)
+        if rng.random() < chance:
+            try:
+                midi = parse_note_name(str(note.get("note", "C5")))
+                cand = midi + (12 if rng.random() < 0.5 else -12)
+                if lo <= cand <= hi:
+                    note["note"] = _midi_to_name(cand)
+                    note["voicing_inverted"] = True
+            except ValueError:
+                pass
+        out.append(note)
+    return out
+
+
+_HAT_STATES = ("ghost", "normal", "accent")
+_HAT_VEL_FACTOR = {"ghost": 0.52, "normal": 0.80, "accent": 1.0}
+# Markov transition weights (current → next), tuned to avoid monotonous runs.
+_HAT_TRANSITIONS = {
+    "ghost": (0.15, 0.55, 0.30),
+    "normal": (0.42, 0.23, 0.35),
+    "accent": (0.48, 0.40, 0.12),
+}
+
+
+def apply_markov_hat_dynamics(
+    notes: list[dict[str, Any]],
+    rng: random.Random,
+    *,
+    peak: int = 118,
+) -> list[dict[str, Any]]:
+    """Markov velocity state-machine for hats — walk ghost/normal/accent through a
+    transition matrix so dynamics breathe (waves of ~100% / ~50%) instead of a
+    monotone machine-gun. Roll notes keep their ramp into the snare."""
+    ordered = sorted((deepcopy(n) for n in notes), key=_note_step)
+    state = "normal"
+    for note in ordered:
+        if note.get("hat_roll"):
+            continue
+        state = rng.choices(_HAT_STATES, weights=_HAT_TRANSITIONS[state])[0]
+        _set_velocity(note, int(peak * _HAT_VEL_FACTOR[state]) + rng.randint(-4, 4))
+        note["hat_state"] = state
+    return ordered
+
+
+_KICK_SYNC_OFFSETS = (1.0, 2.5, 2.75, 3.25)  # weak 16ths; beat 2.0 (clap) excluded
+
+
+def add_kick_syncopation(
+    kick_notes: list[dict[str, Any]],
+    bars: int,
+    rng: random.Random,
+    *,
+    prob: float,
+    clap_offsets: tuple[float, ...] = (2.0,),
+) -> list[dict[str, Any]]:
+    """Weighted syncopation matrix — sprinkle off-grid kicks on weak steps (never
+    on the clap, never doubling an existing kick). The downbeat stays the anchor."""
+    if prob <= 0:
+        return [deepcopy(n) for n in kick_notes]
+    out = [deepcopy(n) for n in kick_notes]
+    existing = {round(_note_step(n), 3) for n in kick_notes}
+    for bar in range(max(1, bars)):
+        base = bar * BEATS_PER_BAR
+        for off in _KICK_SYNC_OFFSETS:
+            if rng.random() > prob:
+                continue
+            t = round(base + off, 5)
+            if any(abs(t - e) < 0.2 for e in existing):
+                continue
+            if any(abs((t % BEATS_PER_BAR) - c) < 0.15 for c in clap_offsets):
+                continue
+            out.append({
+                "time_step": t, "note": "C1", "length": 0.4,
+                "velocity": rng.randint(86, 104), "kick_sync": True,
+            })
+            existing.add(t)
+    return sorted(out, key=_note_step)
+
+
+def build_snare_riser(
+    end_beats: float,
+    *,
+    phrase_bars: int = 8,
+) -> list[dict[str, Any]]:
+    """Festival build — accelerating snare roll (1/4→1/8→1/16→1/32) with rising
+    velocity and a pitch-up hint, in the bar before each phrase drop."""
+    risers: list[dict[str, Any]] = []
+    phrase_len = phrase_bars * BEATS_PER_BAR
+    phrases = max(1, int(end_beats // phrase_len))
+    # (segment start, end, step) — 1/4 → 1/8 → 1/16 → 1/32 across the last bar.
+    segments = ((0.0, 1.0, 1.0), (1.0, 2.0, 0.5), (2.0, 3.0, 0.25), (3.0, 4.0, 0.125))
+    for p in range(1, phrases + 1):
+        bar_start = p * phrase_len - BEATS_PER_BAR
+        for seg_start, seg_end, step in segments:
+            t = bar_start + seg_start
+            while t < bar_start + seg_end - 1e-6:
+                prog = (t - bar_start) / BEATS_PER_BAR
+                risers.append({
+                    "time_step": round(t, 5), "note": "D1",
+                    "length": round(step * 0.9, 5),
+                    "velocity": min(127, int(78 + prog * 49)),
+                    "riser": True, "pitch_up": int(round(prog * 12)),
+                })
+                t += step
+    return sorted(risers, key=_note_step)
+
+
 def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     """Apply producer-brain post-processing to LLM output."""
     data = deepcopy(pattern)
@@ -721,7 +864,10 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
             data = apply_hat_rolling_engine(data, rng)
             hats = track_notes(data, "hi_hats")
         hats = apply_hi_hat_swing(hats, rng, intensity=profile.hat_swing)
-        hats = apply_velocity_sine_curve(hats, base=96, amplitude=18)
+        if profile.markov_hats:
+            hats = apply_markov_hat_dynamics(hats, rng)
+        else:
+            hats = apply_velocity_sine_curve(hats, base=96, amplitude=18)
         if profile.hat_rolls:
             hats = apply_hat_roll_pitch(hats)
         hats = apply_open_hat_choke(hats)
@@ -768,6 +914,10 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         if profile.melody_scale:
             melody = darken_melody_intervals(melody, scale=profile.melody_scale)
             data["plg_key"] = key_label(detect_root_pc(melody), profile.melody_scale)
+        if profile.voicing_spread > 0:
+            melody = apply_chord_voicing_spread(melody, rng, chance=profile.voicing_spread)
+        if profile.melody_lag_ms > 0:
+            melody = apply_melody_groove_lag(melody, bpm, profile.melody_lag_ms, rng)
         if profile.stereo_drop:
             melody = apply_mono_stereo_drop(melody)
         if profile.counter_melody:
@@ -775,6 +925,22 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
             if counter:
                 tracks["counter_melody"] = counter
         tracks["melody_lead"] = melody
+
+    # --- Kick syncopation: weighted off-grid hits (never on the clap) ---
+    if profile.kick_syncopation > 0 and kick:
+        bars = max(1, int(max(_note_end(n) for n in kick) // BEATS_PER_BAR) + 1)
+        kick = add_kick_syncopation(kick, bars, rng, prob=profile.kick_syncopation)
+        tracks["kick"] = kick
+
+    # --- Snare riser: accelerating build before each drop (festival/EDM) ---
+    if profile.snare_riser:
+        end_beats = 0.0
+        for key in TRACK_KEYS:
+            for entry in track_notes(data, key):
+                end_beats = max(end_beats, _note_end(entry))
+        risers = build_snare_riser(end_beats)
+        if risers:
+            tracks["snare"] = sorted(track_notes(data, "snare") + risers, key=_note_step)
 
     # Lay everything into clean registers (808 sub, melody mid, drums native).
     normalize_registers(data)
@@ -799,6 +965,11 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         "hat_db_down": HAT_DB_DOWN,
         "key": data.get("plg_key"),
         "key_matched_808": bool(profile.eight08),
+        "melody_lag_ms": profile.melody_lag_ms,
+        "voicing_spread": profile.voicing_spread,
+        "kick_syncopation": profile.kick_syncopation,
+        "markov_hats": profile.markov_hats,
+        "snare_riser": profile.snare_riser,
         "genre": profile.name,
         "filth": round(profile.filth, 2),
         "filth_max": filth,
@@ -813,6 +984,16 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     steps.append("808 attack +15 ms soften — click-kick punches first, no phase mush.")
     steps.append("Pitch bend: -2 st dip every 8 bars on melody (see pitch_bend_automation).")
     steps.append("Mono→stereo drop: narrow verse melody, wide at phrase drop.")
+    if profile.melody_lag_ms > 0:
+        steps.append(f"Groove lag: melody dragged ~{profile.melody_lag_ms:.0f} ms late (lazy pocket).")
+    if profile.voicing_spread > 0:
+        steps.append("Chord voicing: ~octave inversions open the harmony for vocal space.")
+    if profile.markov_hats:
+        steps.append("Markov hats: ghost/normal/accent velocity walk — no monotone machine-gun.")
+    if profile.kick_syncopation > 0:
+        steps.append("Kick syncopation: weighted off-grid hits on weak steps, clear of the clap.")
+    if profile.snare_riser:
+        steps.append("Snare riser: 1/4→1/32 accelerating build + pitch-up into each drop.")
     if data.get("plg_key"):
         steps.append(f"Key lock: melody + 808 snapped to {data['plg_key']}.")
     steps.append(f"Genre profile: {profile.name}" + (" · FILTH MAX" if filth else "") + ".")

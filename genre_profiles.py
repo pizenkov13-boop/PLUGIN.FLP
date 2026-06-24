@@ -12,7 +12,13 @@ opium/rage path and its tests are unchanged.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+import json
+import logging
+import os
+from dataclasses import dataclass, fields, replace
+from pathlib import Path
+
+logger = logging.getLogger("plg.genre")
 
 
 @dataclass(frozen=True)
@@ -29,6 +35,11 @@ class GenreProfile:
     stereo_drop: bool = True  # narrow verse → wide drop
     soft_clip: bool = False  # master soft-clip hint
     filth: float = 0.5  # 0..1 distortion / aggression hint
+    melody_lag_ms: float = 0.0  # lazy groove-lag: drag melody notes late off the grid
+    voicing_spread: float = 0.0  # 0..1 chance to invert a chord tone an octave for width
+    kick_syncopation: float = 0.0  # 0..1 probability of extra off-grid kick hits (never on clap)
+    markov_hats: bool = False  # Markov velocity state-machine for non-monotonous hats
+    snare_riser: bool = False  # accelerating 1/4→1/32 snare roll + pitch-up before each drop
 
 
 DEFAULT = GenreProfile("trap", None)
@@ -37,15 +48,18 @@ PROFILES: dict[str, GenreProfile] = {
     "trap": DEFAULT,
     "opium": GenreProfile(
         "opium", "phrygian", drop_tension=True, humanize_drum_velocity=False,
-        soft_clip=True, filth=0.9,
+        soft_clip=True, filth=0.9, melody_lag_ms=12.0, voicing_spread=0.15,
+        kick_syncopation=0.35, markov_hats=True,
     ),
     "phonk": GenreProfile(
         "phonk", "natural_minor", hat_swing=1.1, drop_tension=True,
-        humanize_drum_velocity=False, soft_clip=True, filth=0.85,
+        humanize_drum_velocity=False, soft_clip=True, filth=0.85, melody_lag_ms=12.0,
+        kick_syncopation=0.3, markov_hats=True,
     ),
     "drill": GenreProfile(
         "drill", "phrygian", hat_swing=0.9, drop_tension=True,
-        humanize_drum_velocity=False, filth=0.7,
+        humanize_drum_velocity=False, filth=0.7, melody_lag_ms=10.0,
+        kick_syncopation=0.4, markov_hats=True,
     ),
     "hyperpop": GenreProfile(
         "hyperpop", "lydian", hat_swing=0.8, drop_tension=True, soft_clip=True, filth=0.95,
@@ -59,13 +73,36 @@ PROFILES: dict[str, GenreProfile] = {
     ),
     "rnb": GenreProfile(
         "rnb", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.5, filth=0.15,
+        melody_lag_ms=10.0, voicing_spread=0.15,
     ),
     "pop": GenreProfile(
         "pop", "major", eight08_slides=False, hat_rolls=False, hat_swing=0.3, filth=0.25,
+        voicing_spread=0.12,
     ),
     "grind": GenreProfile(
         "grind", "locrian", eight08=False, eight08_slides=False, hat_rolls=False,
         hat_swing=0.0, counter_melody=False, stereo_drop=False, soft_clip=True, filth=1.0,
+    ),
+    # The Weeknd — dark synth-pop: Minor 9th colour (wide voicings), smooth
+    # behind-the-beat pocket, no trap rolls, gentle.
+    "weeknd": GenreProfile(
+        "weeknd", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.4,
+        humanize_drum_velocity=True, soft_clip=False, filth=0.2,
+        melody_lag_ms=14.0, voicing_spread=0.22,
+    ),
+    # Dua Lipa — nu-disco/dance-pop: straight 120 grid, off-beat hats, funky
+    # syncopated bass, wide bright chords, no rolls.
+    "dualipa": GenreProfile(
+        "dualipa", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.2,
+        humanize_drum_velocity=True, soft_clip=False, filth=0.2,
+        kick_syncopation=0.45, voicing_spread=0.2,
+    ),
+    # Martin Garrix — festival/big-room EDM: minor, layered leads, and an
+    # accelerating snare riser (1/4→1/32) with pitch-up before each drop.
+    "garrix": GenreProfile(
+        "garrix", "natural_minor", eight08=False, eight08_slides=False, hat_rolls=False,
+        hat_swing=0.3, drop_tension=True, soft_clip=True, filth=0.5,
+        voicing_spread=0.2, snare_riser=True, markov_hats=True,
     ),
 }
 
@@ -80,9 +117,15 @@ GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "jersey": ("jersey", "jersey club", "джерси", "bed squeak"),
     "kpop": ("kpop", "k-pop", "к-поп", "кпоп", "idol pop"),
     "rnb": ("rnb", "r&b", "rhythm and blues", "neo soul", "neo-soul", "neosoul", "эрэнби"),
-    "pop": ("pop", "поп", "dua", "weeknd", "dance pop", "nu-disco", "nu disco", "synthpop", "synth pop"),
+    "garrix": ("garrix", "martin garrix", "edm", "big room", "bigroom", "festival", "future bounce", "progressive house"),
+    "dualipa": ("dua lipa", "dua", "nu-disco", "nu disco", "disco pop", "dance pop"),
+    "weeknd": ("weeknd", "the weeknd", "abel", "dark pop", "synthwave pop", "80s pop"),
+    "pop": ("pop", "поп", "synthpop", "synth pop"),
 }
-PRIORITY = ("grind", "opium", "phonk", "drill", "hyperpop", "jersey", "kpop", "rnb", "pop")
+PRIORITY = (
+    "grind", "opium", "phonk", "drill", "hyperpop", "jersey", "kpop", "rnb",
+    "garrix", "dualipa", "weeknd", "pop",
+)
 
 
 def detect_genre(style: str = "", prompt: str = "") -> str:
@@ -91,6 +134,38 @@ def detect_genre(style: str = "", prompt: str = "") -> str:
         if any(keyword in text for keyword in GENRE_KEYWORDS[genre]):
             return genre
     return "trap"
+
+
+_ASSET_JSON = Path(__file__).resolve().parent / "assets" / "genre_profiles.json"
+
+
+def _apply_profile_overrides() -> None:
+    """Overlay preset values from JSON so genres can be retuned (or served from
+    the cloud) without code changes. Source: PLG_GENRE_PROFILES_JSON env path, or
+    the bundled assets/genre_profiles.json. Built-in PROFILES stay the fallback;
+    any error is swallowed so a bad file can never break generation."""
+    try:
+        path = os.getenv("PLG_GENRE_PROFILES_JSON") or (
+            str(_ASSET_JSON) if _ASSET_JSON.is_file() else ""
+        )
+        if not path:
+            return
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = raw.get("profiles") if isinstance(raw, dict) and "profiles" in raw else raw
+        valid = {f.name for f in fields(GenreProfile)}
+        for name, fields_dict in (data or {}).items():
+            if not isinstance(fields_dict, dict):
+                continue
+            patch = {k: v for k, v in fields_dict.items() if k in valid and k != "name"}
+            if name in PROFILES:
+                PROFILES[name] = replace(PROFILES[name], **patch)
+            else:
+                PROFILES[name] = GenreProfile(name=name, **patch)
+    except Exception as exc:  # noqa: BLE001 — never let presets break the engine
+        logger.warning("genre profile overrides ignored: %s", exc)
+
+
+_apply_profile_overrides()
 
 
 def profile_for(style: str = "", prompt: str = "", *, filth_max: bool = False) -> GenreProfile:

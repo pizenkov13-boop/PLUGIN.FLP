@@ -116,6 +116,31 @@ def _channel_block(data: dict[str, Any], bucket: str, locale: str) -> list[str]:
     return lines
 
 
+def _mastering_math_block(bpm: float, locale: str) -> list[str]:
+    """Exact commercial mix/master targets, with reverb times derived from BPM
+    (ms = 60000 / BPM). The numbers are the spec; FL is where they're applied."""
+    beat_ms = 60_000.0 / max(1.0, bpm)
+    predelay_ms = beat_ms / 4.0       # 1/16-note pre-delay
+    bar_ms = beat_ms * 4.0            # one bar = reverb decay target
+    header = (
+        "МАТЕМАТИКА СВЕДЕНИЯ И МАСТЕРИНГА (применить в FL)"
+        if locale == "ru"
+        else "MIX & MASTER MATH (apply in FL)"
+    )
+    return [
+        f"─── {header} ───",
+        "  Peaks:  Kick -2 dB · 808 -5 dB · Clap/Snare -6 dB · Melody -12 dB · Hi-Hats -12..-15 dB",
+        "  EQ:     Kick HPF <30 Hz · 808 LPF >250 Hz (vocal space) · Clap +1.5 kHz snap",
+        "          Hats HPF <500 Hz · Melody HPF <150 Hz + dip 200-500 Hz & 2-4 kHz",
+        "  Sidechain: 808 → Fruity Limiter (COMP) → input = Kick · Threshold ~1/2 down · Ratio up (~50 ms duck)",
+        "  Mono:   everything <120 Hz strictly MONO (Fruity Stereo Shaper → 100% mono)",
+        f"  Reverb @ {bpm:.0f} BPM:  beat = {beat_ms:.1f} ms · pre-delay 1/16 = {predelay_ms:.1f} ms · decay 1 bar = {bar_ms:.0f} ms",
+        "  Master: Fruity Soft Clipper · Ceiling -1.0 dB (true-peak) · Dithering + noise-shaping ON",
+        "          Target loudness: -7..-5 LUFS short-term (commercial trap density)",
+        "",
+    ]
+
+
 def build_mix_blueprint(data: dict[str, Any], *, stem_folder: str | None = None) -> str:
     """Producer-style mixing cheat sheet for the generated beat."""
     bpm = float(data.get("bpm", 140))
@@ -164,6 +189,8 @@ def build_mix_blueprint(data: dict[str, Any], *, stem_folder: str | None = None)
             f"  {blueprint_text(locale, 'fx_recipe_kick')}",
             "",
         ])
+
+    lines.extend(_mastering_math_block(bpm, locale))
 
     manual = data.get("manual_steps") or []
     if manual:

@@ -40,9 +40,10 @@ from pattern_utils import (
     track_notes,
 )
 
-# Pulses per quarter note stored in the file header. 96 is a classic, always
-# FL-supported value; note times below are computed in these units.
-PPQ = 96
+# Pulses per quarter note stored in the file header. 960 = atomic timeline
+# resolution so humanize micro-shifts (swing, groove-lag, 808 attack) land
+# precisely instead of quantizing to a ~4.5 ms grid. 960 is a standard FL PPQ.
+PPQ = 960
 
 # FL version string FL reads first to decide text encoding. v21 -> UTF-16 text.
 FL_VERSION = "21.0.0.0"

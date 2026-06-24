@@ -11,6 +11,10 @@ from midiutil import MIDIFile
 from mix_blueprint import session_slug
 from pattern_utils import CHANNEL_NAMES, TRACK_KEYS, parse_note_name, step_to_beats, track_notes
 
+# 960 pulses-per-quarter — atomic timing so humanize micro-shifts (swing, melody
+# groove-lag, 808 attack) survive export instead of snapping to a coarse grid.
+PPQ = 960
+
 PROJECT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_DIR / "output_midi"
 DEFAULT_JSON = PROJECT_DIR / "output_pattern.json"
@@ -86,7 +90,7 @@ def export_pattern_to_midi(
         if not notes:
             continue
 
-        midi = MIDIFile(1)
+        midi = MIDIFile(1, ticks_per_quarternote=PPQ)
         midi.addTempo(0, 0, bpm)
         export_track(midi, 0, notes, 0, bpm=bpm)
         bends = data.get("pitch_bend_automation") or []
@@ -167,7 +171,7 @@ def export_combined_midi(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bpm = float(data.get("bpm", 120))
-    midi = MIDIFile(len(tracks))
+    midi = MIDIFile(len(tracks), ticks_per_quarternote=PPQ)
 
     for track_index, (track_key, notes) in enumerate(tracks):
         midi.addTrackName(track_index, 0, TRACK_EXPORT_NAMES.get(track_key, track_key))
