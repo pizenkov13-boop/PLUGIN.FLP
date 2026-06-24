@@ -101,10 +101,18 @@ def format_llm_error(exc: Exception) -> str:
             "4. Check usage: aistudio.google.com → API keys → Quota"
         )
 
+    if "getaddrinfo failed" in text.lower() or "name or service not known" in text.lower():
+        return (
+            "Network/DNS error — cannot reach the server.\n\n"
+            "Cloud mode: check PLG_CLOUD_URL in .env and run python cloud\\run.py locally.\n"
+            "Local mode: check your internet connection."
+        )
+
     if "timeout" in text.lower() or "timed out" in text.lower():
         return (
-            "Gemini did not answer in time.\n\n"
-            "Check internet connection and API key in Settings."
+            "Request timed out.\n\n"
+            "Cloud mode: Gemini can take 1–3 min — keep cloud\\run.py running and retry.\n"
+            "Local mode: check internet and API key in Settings."
         )
 
     if "API_KEY" in upper or "401" in text or "403" in text or "INVALID" in upper:

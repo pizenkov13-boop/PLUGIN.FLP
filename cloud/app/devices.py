@@ -20,7 +20,7 @@ def register_device(
     if not device_id or len(device_id) > 128:
         raise HTTPException(400, "Invalid device_id.")
 
-    existing = (
+    result = (
         client.table("user_devices")
         .select("*")
         .eq("user_id", user_id)
@@ -28,10 +28,11 @@ def register_device(
         .maybe_single()
         .execute()
     )
+    row = result.data if result else None
     now = datetime.now(timezone.utc).isoformat()
-    if existing.data:
+    if row:
         client.table("user_devices").update({"last_seen": now, "device_name": device_name}).eq(
-            "id", existing.data["id"]
+            "id", row["id"]
         ).execute()
         return {"ok": True, "registered": True, "device_id": device_id}
 

@@ -1,5 +1,12 @@
 # Secrets
 .env
+cloud/.env
+cloud/.env.staging
+
+# Local-only / large (sample packs, agent tooling, scratch renders)
+.claude/
+PLG_Sounds/
+preview.wav
 
 # Python
 __pycache__/

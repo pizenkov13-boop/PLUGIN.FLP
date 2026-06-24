@@ -40,6 +40,12 @@ python -c "from starter_kit import ensure_starter_kit; ensure_starter_kit()" || 
 
 
 
+echo Generating app icon from logo...
+
+python scripts\make_icon.py || goto :fail
+
+
+
 where pyinstaller >nul 2>&1
 
 if errorlevel 1 (

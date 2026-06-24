@@ -25,9 +25,11 @@ def test_blueprint_mentions_808_and_stems():
     assert "FL Studio Blueprint" in text
 
 
-def test_blueprint_has_exact_filthy_recipe():
-    data = {"bpm": 150, "style": "opium rage", "plg_producer_meta": {"master_soft_clip": True}}
+def test_blueprint_has_fx_recipe_without_brands():
+    data = {"bpm": 150, "style": "dark rage trap", "plg_producer_meta": {"master_soft_clip": True}}
     text = build_mix_blueprint(data)
     assert "Pre-Amp 40%" in text
     assert "+4 dB" in text
     assert "Fruity Soft Clipper" in text
+    assert "F1LTHY" not in text.upper()
+    assert "OPIUM" not in text.upper()

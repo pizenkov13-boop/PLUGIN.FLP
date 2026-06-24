@@ -1,7 +1,10 @@
-import { installFlScripts, openDocument } from "../api";
+import { installFlScripts, openExternalUrl } from "../api";
 import type { Status } from "../types";
 import { useI18n } from "../i18n";
 import "./FlOnboardingBanner.css";
+
+const FL_STUDIO_URL = "https://www.image-line.com/fl-studio/";
+const FL_VERSIONS_URL = "https://www.image-line.com/fl-studio/compare-editions/";
 
 type Props = {
   status: Status | null;
@@ -32,7 +35,7 @@ export default function FlOnboardingBanner({ status, onInstalled }: Props) {
         )}
       </div>
       <div className="fl-onboard__actions">
-        <button type="button" className="page__btn page__btn--ghost" onClick={() => openDocument("fl_versions")}>
+        <button type="button" className="page__btn page__btn--ghost" onClick={() => openExternalUrl(FL_VERSIONS_URL)}>
           {t("flOnboard.compatibility")}
         </button>
         {needsScripts && (
@@ -41,11 +44,7 @@ export default function FlOnboardingBanner({ status, onInstalled }: Props) {
           </button>
         )}
         {missingFl && (
-          <button
-            type="button"
-            className="page__btn page__btn--primary"
-            onClick={() => openDocument("start_here")}
-          >
+          <button type="button" className="page__btn page__btn--primary" onClick={() => openExternalUrl(FL_STUDIO_URL)}>
             {t("flOnboard.getFl")}
           </button>
         )}

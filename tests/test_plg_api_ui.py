@@ -20,18 +20,18 @@ def test_get_app_info_has_version_and_docs(tmp_path, monkeypatch):
     assert "quota" in info
 
 
-def test_open_document_reveals_file(tmp_path, monkeypatch):
+def test_open_document_opens_file(tmp_path, monkeypatch):
     monkeypatch.setattr(plg_api, "PROJECT_DIR", tmp_path)
     doc = tmp_path / "FL_BRIDGE.md"
     doc.write_text("# bridge", encoding="utf-8")
 
     called: list[str] = []
 
-    def fake_reveal(path: str):
+    def fake_open(path: str):
         called.append(path)
         return {"ok": True}
 
-    monkeypatch.setattr(plg_api, "reveal_path", fake_reveal)
+    monkeypatch.setattr(plg_api, "open_path", fake_open)
     result = plg_api.open_document("fl_bridge")
 
     assert result["ok"] is True

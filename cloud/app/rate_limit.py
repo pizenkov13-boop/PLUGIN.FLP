@@ -12,6 +12,7 @@ from cloud.app.config import (
     GEN_COOLDOWN_SEC,
     GEN_HOURLY_LIMIT,
     IP_HOURLY_LIMIT,
+    SIGNUP_IP_HOURLY_LIMIT,
 )
 from cloud.app import redis_store
 
@@ -52,6 +53,7 @@ class SlidingWindow:
 _ip_window = SlidingWindow()
 _user_gen_window = SlidingWindow()
 _user_cooldown = SlidingWindow()
+_signup_window = SlidingWindow()
 
 
 def check_ip_limit(ip: str) -> None:
@@ -59,6 +61,17 @@ def check_ip_limit(ip: str) -> None:
         return
     if not _ip_window.allow(f"rl:ip:{ip}", IP_HOURLY_LIMIT, 3600.0):
         raise HTTPException(429, f"Too many requests from this IP (max {IP_HOURLY_LIMIT}/hour).")
+
+
+def check_signup_limit(ip: str) -> None:
+    """Signup is exempt from the global IP middleware — gate it separately so a
+    single IP can't farm accounts (trial-beat farming) even if CAPTCHA is off."""
+    if not ip:
+        return
+    if not _signup_window.allow(f"rl:signup:{ip}", SIGNUP_IP_HOURLY_LIMIT, 3600.0):
+        raise HTTPException(
+            429, "Too many sign-up attempts from this network. Try again later."
+        )
 
 
 def check_generate_limits(user_id: str) -> None:

@@ -1,0 +1,6 @@
+# Auto-HTTPS reverse proxy for the PLG Cloud API.
+# Caddy fetches + renews a free Let's Encrypt cert for the domain below.
+{$PLG_API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8787
+}

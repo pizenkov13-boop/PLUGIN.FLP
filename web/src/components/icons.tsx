@@ -1,29 +1,40 @@
+/* Sidebar + UI icons — consistent 24×24, 1.75 stroke, rounded caps. */
+
+const S = {
+  width: 20,
+  height: 20,
+  viewBox: "0 0 24 24",
+  fill: "none" as const,
+  "aria-hidden": true,
+};
+
+const stroke = {
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
 export function IconHome() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg {...S}>
       <path
-        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
+        {...stroke}
+        d="M5 10.5 12 5l7 5.5V19a1.25 1.25 0 0 1-1.25 1.25H6.25A1.25 1.25 0 0 1 5 19v-8.5Z"
       />
+      <path {...stroke} d="M10 20.25V14h4v6.25" />
     </svg>
   );
 }
 
 export function IconSettings() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg {...S}>
+      <circle {...stroke} cx="12" cy="12" r="2.75" />
       <path
-        d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M19.4 13.5a7.4 7.4 0 0 0 .1-3l2-1.2-2-3.5-2.3.7a7.5 7.5 0 0 0-2.6-1.5L14.5 2h-5l-.1 2.9a7.5 7.5 0 0 0-2.6 1.5l-2.3-.7-2 3.5 2 1.2a7.4 7.4 0 0 0 0 3l-2 1.2 2 3.5 2.3-.7c.8.6 1.7 1.1 2.6 1.5l.1 2.9h5l.1-2.9c.9-.4 1.8-.9 2.6-1.5l2.3.7 2-3.5-2-1.2Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
+        {...stroke}
+        strokeLinejoin="miter"
+        d="M12 3.5v2.1M12 18.4v2.1M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M3.5 12h2.1M18.4 12h2.1M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"
       />
     </svg>
   );
@@ -35,7 +46,7 @@ export function IconRegenerate() {
       <path
         d="M4 12a8 8 0 0 1 13.7-5.6M20 7V4m0 0h-3m3 0 5.2 5.2M20 12a8 8 0 0 1-13.7 5.6M4 17v3m0 0h3m-3 0-5.2-5.2"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -45,12 +56,10 @@ export function IconRegenerate() {
 
 export function IconWave() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg {...S}>
       <path
-        d="M3 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
+        {...stroke}
+        d="M3 10v4M7 8v8M11 6v12M15 9v6M19 7v10M23 10v4"
       />
     </svg>
   );
@@ -66,49 +75,82 @@ export function IconPlay() {
 
 export function IconFl() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 9h8M8 12h6M8 15h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg {...S}>
+      <rect {...stroke} x="4.5" y="4.5" width="15" height="15" rx="3.5" />
+      <path {...stroke} d="M8.5 9h7M8.5 12h5.5M8.5 15h4" />
     </svg>
   );
 }
 
+export function IconFolder() {
+  return (
+    <svg {...S}>
+      <path
+        {...stroke}
+        d="M4.5 8.5h5.2l1.8 2h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 4.5 18.5v-10Z"
+      />
+    </svg>
+  );
+}
+
+/** Sample library — stacked wave slots. */
 export function IconLibrary() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 4h5v16H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm8 0h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-6V4Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
+    <svg {...S}>
+      <rect {...stroke} x="4" y="5" width="6" height="14" rx="1.25" />
+      <path {...stroke} d="M13 9v10M17 7v12M21 10v9" />
     </svg>
   );
 }
 
+/** Producer tools — horizontal sliders. */
 export function IconTools() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-3.4-3.4 2.1-2.1Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
+    <svg {...S}>
+      <path {...stroke} d="M4 8h16M4 12h10M4 16h14" />
+      <circle fill="currentColor" cx="16" cy="8" r="1.75" />
+      <circle fill="currentColor" cx="10" cy="12" r="1.75" />
+      <circle fill="currentColor" cx="18" cy="16" r="1.75" />
     </svg>
   );
 }
 
 export function IconHelp() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+    <svg {...S}>
+      <circle {...stroke} cx="12" cy="12" r="8.25" />
       <path
-        d="M9.5 9.2a2.7 2.7 0 0 1 5 1.4c0 1.6-2.5 2-2.5 3.6M12 16.2h.01"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
+        {...stroke}
+        d="M9.75 9.25a2.35 2.35 0 0 1 4.1 1.45c0 1.45-2.35 1.75-2.35 3.3M12 16.75h.01"
       />
+    </svg>
+  );
+}
+
+export function IconAccount() {
+  return (
+    <svg {...S}>
+      <circle {...stroke} cx="12" cy="8.25" r="3.25" />
+      <path
+        {...stroke}
+        d="M5.5 19.5a6.5 6.5 0 0 1 13 0"
+      />
+    </svg>
+  );
+}
+
+export function IconGrid() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="6" cy="6" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="6" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="6" r="1.6" fill="currentColor" />
+      <circle cx="6" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="6" cy="18" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="18" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="18" r="1.6" fill="currentColor" />
     </svg>
   );
 }
@@ -116,8 +158,8 @@ export function IconHelp() {
 export function IconSearch() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
     </svg>
   );
 }

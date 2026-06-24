@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -10,26 +11,57 @@ from typing import Any
 from fastapi import HTTPException, Request
 from supabase import Client
 
-from cloud.app.config import REQUIRE_DEVICE_BINDING
+from cloud.app.config import REQUIRE_DEVICE_BINDING, TRUSTED_PROXY
 
 logger = logging.getLogger("plg.security")
 
 
+def _peer_ip(request: Request) -> str:
+    return (request.client.host if request.client else "") or ""
+
+
 def client_ip(request: Request) -> str:
-    cf = request.headers.get("CF-Connecting-IP", "").strip()
-    if cf:
-        return cf
-    forwarded = request.headers.get("X-Forwarded-For", "").strip()
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host or ""
-    return ""
+    """Resolve the real client IP without trusting spoofable headers.
+
+    `X-Forwarded-For` / `CF-Connecting-IP` are attacker-controllable unless the
+    request actually arrives through our proxy. Trusting them blindly lets an
+    attacker dodge IP rate limits/bans and frame other IPs. Only honour the
+    header that our configured edge (PLG_TRUSTED_PROXY) is known to set.
+    """
+    proxy = TRUSTED_PROXY
+    if proxy == "cloudflare":
+        # Cloudflare overwrites CF-Connecting-IP with the true client IP. Raw
+        # X-Forwarded-For[0] is still client-controlled, so we ignore it.
+        cf = request.headers.get("CF-Connecting-IP", "").strip()
+        return cf or _peer_ip(request)
+    if proxy in ("xff", "proxy", "nginx", "alb", "ingress"):
+        forwarded = request.headers.get("X-Forwarded-For", "").strip()
+        return forwarded.split(",")[0].strip() if forwarded else _peer_ip(request)
+    # Direct exposure (PLG_TRUSTED_PROXY=none/unknown): never trust headers.
+    return _peer_ip(request)
 
 
 def fingerprint(device_id: str | None, ip: str) -> str:
     raw = f"{(device_id or '').strip()}|{ip.strip()}"
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def ip_in_allowlist(ip: str, cidrs: list[str]) -> bool:
+    """True if `ip` falls in any of the given CIDRs / single addresses."""
+    if not ip:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    for cidr in cidrs:
+        try:
+            net = ipaddress.ip_network(cidr, strict=False)
+        except ValueError:
+            continue
+        if addr.version == net.version and addr in net:
+            return True
+    return False
 
 
 def check_honeypot(value: str | None) -> None:
@@ -58,8 +90,9 @@ def is_banned(
 ) -> str | None:
     if user_id:
         prof = client.table("profiles").select("banned,ban_reason").eq("id", user_id).maybe_single().execute()
-        if prof.data and prof.data.get("banned"):
-            return str(prof.data.get("ban_reason") or "Account banned.")
+        pdata = prof.data if prof else None
+        if pdata and pdata.get("banned"):
+            return str(pdata.get("ban_reason") or "Account banned.")
 
     checks: list[tuple[str, str]] = []
     if user_id:
@@ -80,8 +113,9 @@ def is_banned(
             .maybe_single()
             .execute()
         )
-        if _ban_active(result.data):
-            return str(result.data.get("reason") or f"Banned ({ban_type}).")
+        row = result.data if result else None
+        if _ban_active(row):
+            return str((row or {}).get("reason") or f"Banned ({ban_type}).")
     return None
 
 
@@ -113,7 +147,7 @@ def require_registered_device(client: Client, user_id: str, device_id: str | Non
         .maybe_single()
         .execute()
     )
-    if not existing.data:
+    if not (existing and existing.data):
         raise HTTPException(
             403,
             "Unknown device. Sign out and sign in again to bind this PC.",
@@ -134,7 +168,7 @@ def claim_device_trial(client: Client, device_id: str, user_id: str) -> bool:
         .maybe_single()
         .execute()
     )
-    if existing.data:
+    if existing and existing.data:
         return str(existing.data.get("first_user_id")) == user_id
 
     client.table("device_trial_claims").insert(

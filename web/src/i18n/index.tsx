@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Locale, Messages, LocalePack } from "./types";
+import type { Locale, Messages, LocalePack, PromptCard } from "./types";
 import { LOCALE_OPTIONS, RTL_LOCALES } from "./types";
 import { en } from "./locales/en";
 import { ru } from "./locales/ru";
@@ -31,10 +31,20 @@ const MESSAGES: Record<Locale, Messages> = Object.fromEntries(
     locale,
     {
       ...pack,
+      nav: { ...en.nav, ...pack.nav },
+      account: { ...en.account, ...(pack as { account?: Partial<Messages["account"]> }).account },
       auth: { ...en.auth, ...pack.auth },
       settings: { ...en.settings, ...pack.settings },
       offline: { ...en.offline, ...pack.offline },
       errors: { ...en.errors, ...(pack as { errors?: Partial<Messages["errors"]> }).errors },
+      status: {
+        ...en.status,
+        ...pack.status,
+        phases: {
+          ...en.status.phases,
+          ...(pack.status as { phases?: Partial<Messages["status"]["phases"]> } | undefined)?.phases,
+        },
+      },
       regenerate: { ...en.regenerate, ...pack.regenerate },
       flOnboard: { ...en.flOnboard, ...pack.flOnboard },
       updates: { ...en.updates, ...pack.updates },
@@ -43,6 +53,7 @@ const MESSAGES: Record<Locale, Messages> = Object.fromEntries(
         ...pack.help,
         docs: { ...en.help.docs, ...(pack.help?.docs ?? {}) },
       },
+      prompts: { ...en.prompts, ...pack.prompts },
     },
   ]),
 ) as Record<Locale, Messages>;
@@ -138,12 +149,33 @@ export function formatQuotaLabel(t: I18nContextValue["t"], quota: Quota): string
   });
 }
 
+const PROMPT_IDEA_ORDER = [
+  "rageMelody",
+  "darkTrap",
+  "darkAtmospheric",
+  "phonk",
+  "evilPluck",
+  "pluggnb",
+  "detroit",
+  "drill",
+  "melodic",
+  "ambient",
+  "hyperpop",
+  "westcoast",
+] as const;
+
+export type PromptIdea = { id: string } & PromptCard;
+
+export function promptIdeas(messages: Messages): PromptIdea[] {
+  const out: PromptIdea[] = [];
+  for (const id of PROMPT_IDEA_ORDER) {
+    const card = messages.prompts[id];
+    if (card) out.push({ id, ...card });
+  }
+  return out;
+}
+
+/** @deprecated use promptIdeas */
 export function promptCards(messages: Messages) {
-  return [
-    { id: "darkTrap", tone: "violet" as const, ...messages.prompts.darkTrap },
-    { id: "rageMelody", tone: "rose" as const, ...messages.prompts.rageMelody },
-    { id: "pluggnb", tone: "blue" as const, ...messages.prompts.pluggnb },
-    { id: "detroit", tone: "amber" as const, ...messages.prompts.detroit },
-    { id: "melodic", tone: "mint" as const, ...messages.prompts.melodic },
-  ];
+  return promptIdeas(messages);
 }

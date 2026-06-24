@@ -1,0 +1,28 @@
+# Render Blueprint — must live at the REPO ROOT for Render to auto-detect it.
+# New → Blueprint → pick this repo + the branch that has the cloud/ backend.
+services:
+  - type: web
+    name: plg-api
+    runtime: docker
+    dockerfilePath: ./cloud/Dockerfile
+    dockerContext: .
+    plan: free          # no card needed; bump to "starter" later to stop cold-starts
+    region: frankfurt   # EU — Gemini/LLM APIs reachable (unlike RU)
+    healthCheckPath: /health
+    envVars:
+      - key: PLG_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Render prompts for these at Blueprint deploy (sync:false = secret, not committed):
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PLG_ADMIN_SECRET
+        generateValue: true   # auto-generated, no input needed
+      # Optional later: REDIS_URL, SENTRY_DSN, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY

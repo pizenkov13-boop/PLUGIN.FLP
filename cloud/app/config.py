@@ -11,8 +11,13 @@ APP_VERSION = os.getenv("PLG_APP_VERSION", "1.0.0")
 MIN_CLIENT_VERSION = os.getenv("PLG_MIN_CLIENT_VERSION", "1.0.0")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+SUPABASE_SERVICE_KEY = (
+    os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_SECRET_KEY") or ""
+).strip()
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip()
+SUPABASE_JWKS_URL = (os.getenv("SUPABASE_JWKS_URL") or "").strip() or (
+    f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json" if SUPABASE_URL else ""
+)
 
 MAX_PROMPT_CHARS = int(os.getenv("PLG_MAX_PROMPT_CHARS", "4000"))
 MAX_DEVICES = int(os.getenv("PLG_MAX_DEVICES", "3"))
@@ -36,6 +41,20 @@ BILLING_RETURN_URL = os.getenv("PLG_BILLING_RETURN_URL", "https://pluginflp.app/
 
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "")
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "")
+# YooKassa doesn't sign webhooks — it publishes fixed notification source IPs.
+# The handler already re-fetches the payment from the API (forgery-proof); this
+# allowlist stops randoms from spamming the endpoint (load on us + their API).
+# Disable with PLG_YOOKASSA_VERIFY_IP=false if your edge mangles source IPs.
+YOOKASSA_VERIFY_IP = os.getenv("PLG_YOOKASSA_VERIFY_IP", "true").lower() in ("1", "true", "yes")
+YOOKASSA_WEBHOOK_IPS = [
+    c.strip()
+    for c in os.getenv(
+        "PLG_YOOKASSA_WEBHOOK_IPS",
+        "185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,"
+        "77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32",
+    ).split(",")
+    if c.strip()
+]
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -48,6 +67,15 @@ PADDLE_API_KEY = os.getenv("PADDLE_API_KEY", "")
 GEN_COOLDOWN_SEC = int(os.getenv("PLG_GEN_COOLDOWN_SEC", "15"))
 GEN_HOURLY_LIMIT = int(os.getenv("PLG_GEN_HOURLY_LIMIT", "20"))
 IP_HOURLY_LIMIT = int(os.getenv("PLG_IP_HOURLY_LIMIT", "100"))
+SIGNUP_IP_HOURLY_LIMIT = int(os.getenv("PLG_SIGNUP_IP_HOURLY_LIMIT", "5"))
+# CORS: desktop client uses Bearer tokens, not cookies — credentials off, lock
+# origins. Comma-separated list, or "*" for non-credentialed any-origin.
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.getenv("PLG_ALLOWED_ORIGINS", "*").split(",") if o.strip()
+] or ["*"]
+# Hard cap on request body size — guards against memory/cost-exhaustion bodies
+# while staying well above any legitimate sample catalog. 2 MB default.
+MAX_BODY_BYTES = int(os.getenv("PLG_MAX_BODY_BYTES", str(2 * 1024 * 1024)))
 IP_DAILY_GEN_ALERT = int(os.getenv("PLG_IP_DAILY_GEN_ALERT", "50"))
 LLM_QUEUE_SLOTS = int(os.getenv("PLG_LLM_QUEUE_SLOTS", "8"))
 LLM_QUEUE_TIMEOUT_SEC = int(os.getenv("PLG_LLM_QUEUE_TIMEOUT_SEC", "120"))

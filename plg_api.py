@@ -89,6 +89,7 @@ ProgressCb = Callable[[str, float, str], None]
 _state_lock = threading.Lock()
 _last_prompt: str = ""
 _ui_locale: str = "en"
+_session_validated = False
 
 
 def set_ui_locale(locale: str) -> dict[str, Any]:
@@ -173,7 +174,9 @@ def _format_cloud_quota_label(snap: dict[str, Any]) -> str:
 def get_auth_status() -> dict[str, Any]:
     if not _cloud_enabled():
         return {"ok": True, "cloud_mode": False, "signed_in": True}
+    ensured = plg_cloud.ensure_session(validate=True)
     snap = plg_cloud.session_snapshot()
+    snap["signed_in"] = bool(ensured.get("signed_in"))
     cfg = plg_cloud.fetch_auth_config()
     flags = plg_cloud.fetch_feature_flags()
     return {
@@ -197,27 +200,46 @@ def cloud_signup(
     accept_terms: bool = False,
     confirm_age: bool = False,
 ) -> dict[str, Any]:
+    global _session_validated
     if not _cloud_enabled():
         return _err("Cloud mode is disabled.", "config")
-    return plg_cloud.signup(
+    result = plg_cloud.signup(
         email, password, captcha_token, invite_code, accept_terms, confirm_age
     )
+    if result.get("ok") and plg_cloud.is_signed_in():
+        _session_validated = True
+        try:
+            import plg_analytics
+
+            session = plg_cloud.load_session()
+            user = session.get("user") or {}
+            uid = str(user.get("id") or user.get("sub") or email)
+            plg_analytics.identify_user(uid, {"email": email})
+            plg_analytics.track("signup")
+        except Exception:  # noqa: BLE001
+            pass
+    return result
 
 
 def cloud_delete_account() -> dict[str, Any]:
+    global _session_validated
     if not _cloud_enabled():
         return _err("Cloud mode is disabled.", "config")
     if not plg_cloud.is_signed_in():
         return _err("Sign in first.", "auth")
-    return plg_cloud.delete_account()
+    result = plg_cloud.delete_account()
+    if result.get("ok"):
+        _session_validated = False
+    return result
 
 
 def cloud_login(email: str, password: str) -> dict[str, Any]:
+    global _session_validated
     if not _cloud_enabled():
         return _err("Cloud mode is disabled.", "config")
     result = plg_cloud.login(email, password)
     if result.get("ok"):
-        plg_cloud.register_device()
+        _session_validated = True
         try:
             import plg_analytics
 
@@ -232,8 +254,10 @@ def cloud_login(email: str, password: str) -> dict[str, Any]:
 
 
 def cloud_logout() -> dict[str, Any]:
+    global _session_validated
     if not _cloud_enabled():
         return {"ok": True}
+    _session_validated = False
     return plg_cloud.logout()
 
 
@@ -433,15 +457,29 @@ def _read_export_meta() -> dict[str, Any]:
 
 def get_status() -> dict[str, Any]:
     """Cheap app status for the header/status bar (no filesystem walk)."""
+    global _session_validated
     app_config.load_environment()
     fl_exe = find_fl_executable()
     export_meta = _read_export_meta() if PATTERN_JSON.is_file() else {}
     cloud = _cloud_enabled()
-    signed_in = plg_cloud.is_signed_in() if cloud else True
-    auth = plg_cloud.session_snapshot() if cloud else {}
+    signed_in = True
+    auth: dict[str, Any] = {}
+    if cloud:
+        validate = not _session_validated
+        try:
+            ensured = plg_cloud.ensure_session(validate=validate)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("ensure_session failed: %s", exc)
+            ensured = {"ok": True, "signed_in": plg_cloud.is_signed_in()}
+        if validate:
+            _session_validated = True
+        signed_in = bool(ensured.get("signed_in"))
+        auth = plg_cloud.session_snapshot()
+        auth["signed_in"] = signed_in
     return {
         "ok": True,
         "cloud_mode": cloud,
+        "cloud_url": plg_cloud.cloud_api_url() if cloud else None,
         "release_build": is_release_build(),
         "signed_in": signed_in,
         "auth_email": auth.get("email"),
@@ -464,7 +502,7 @@ def get_status() -> dict[str, Any]:
 
 
 def reveal_path(path: str) -> dict[str, Any]:
-    """Open a file or its parent folder in the OS shell (Windows Explorer)."""
+    """Open a folder in the OS shell (Windows Explorer, Finder, xdg-open)."""
     target = Path((path or "").strip())
     if not target.exists():
         return _err(f"Path not found: {path}", "not_found")
@@ -484,6 +522,30 @@ def reveal_path(path: str) -> dict[str, Any]:
 
             subprocess.run(["xdg-open", str(reveal)], check=False)
         return {"ok": True, "path": str(reveal)}
+    except OSError as exc:
+        return _err(str(exc), "os_error")
+
+
+def open_path(path: str) -> dict[str, Any]:
+    """Open a file with the OS default app (e.g. Notepad / browser for .md)."""
+    target = Path((path or "").strip())
+    if not target.is_file():
+        return _err(f"File not found: {path}", "not_found")
+    try:
+        import os
+        import sys
+
+        if sys.platform == "win32":
+            os.startfile(target)  # noqa: S606
+        elif sys.platform == "darwin":
+            import subprocess
+
+            subprocess.run(["open", str(target)], check=False)
+        else:
+            import subprocess
+
+            subprocess.run(["xdg-open", str(target)], check=False)
+        return {"ok": True, "path": str(target)}
     except OSError as exc:
         return _err(str(exc), "os_error")
 
@@ -976,7 +1038,7 @@ DOC_FILES = {
     "privacy": "legal/PRIVACY_RU.md",
     "privacy_en": "legal/PRIVACY_EN.md",
     "refund": "legal/REFUND.md",
-    "business": "legal/BUSINESS_RU.md",
+    "business": "docs/internal/BUSINESS_RU.md",
 }
 
 
@@ -1039,14 +1101,14 @@ def get_app_info() -> dict[str, Any]:
 
 
 def open_document(doc_id: str) -> dict[str, Any]:
-    """Reveal a shipped markdown doc in Explorer."""
+    """Open a shipped markdown doc in the user's default viewer — not the whole folder."""
     name = DOC_FILES.get(doc_id)
     if not name:
         return _err(f"Unknown document: {doc_id}", "validation")
     path = PROJECT_DIR / name
     if not path.is_file():
         return _err(f"Document missing: {name}", "not_found")
-    return reveal_path(str(path))
+    return open_path(str(path))
 
 
 def stems_status() -> dict[str, Any]:

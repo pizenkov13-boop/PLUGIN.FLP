@@ -13,6 +13,7 @@ from cloud.app.config import (
     DEV_USER_ID,
     MIN_CLIENT_VERSION,
     SUPABASE_JWT_SECRET,
+    SUPABASE_JWKS_URL,
     SUPABASE_SERVICE_KEY,
     SUPABASE_URL,
 )
@@ -52,16 +53,31 @@ def decode_user_token(authorization: str | None) -> str:
         raise HTTPException(401, "Missing authorization token.")
 
     token = authorization.split(" ", 1)[1].strip()
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(503, "JWT secret not configured.")
+    if not SUPABASE_JWT_SECRET and not SUPABASE_JWKS_URL:
+        raise HTTPException(503, "JWT verification not configured.")
 
     try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+        if SUPABASE_JWT_SECRET:
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
+        else:
+            from jwt import PyJWKClient
+
+            signing_key = PyJWKClient(SUPABASE_JWKS_URL).get_signing_key_from_jwt(token)
+            # Only asymmetric algorithms here. Allowing HS256 alongside a key
+            # fetched from JWKS enables the classic alg-confusion attack (forge an
+            # HS256 token using the public key as the HMAC secret). HS256 is only
+            # ever valid via the shared-secret branch above.
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["ES256", "RS256"],
+                audience="authenticated",
+            )
     except jwt.PyJWTError as exc:
         raise HTTPException(401, "Invalid or expired token.") from exc
 

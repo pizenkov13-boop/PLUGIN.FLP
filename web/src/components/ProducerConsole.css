@@ -91,16 +91,16 @@
 }
 
 .console__btn--fire {
-  border-color: rgba(255, 140, 60, 0.35);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .console__btn--fire:hover:not(:disabled) {
-  border-color: rgba(255, 140, 60, 0.6);
-  background: rgba(255, 100, 40, 0.08);
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .console__btn--on {
-  border-color: rgba(245, 245, 245, 0.5);
+  border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.12);
   color: var(--text-1);
 }

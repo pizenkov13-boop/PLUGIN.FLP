@@ -1,4 +1,4 @@
-"""Build Opium / F1LTHY-style bundled one-shots into assets/starter/bundled_sounds/."""
+"""Build bundled trap one-shots into assets/starter/bundled_sounds/."""
 
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ def ensure_bundled_sounds(*, force: bool = False) -> Path:
                 "version": 1,
                 "count": len(written),
                 "files": written,
-                "style": "opium_f1lthy_starboy_procedural",
+                "style": "plg_bundled_trap_procedural",
             },
             indent=2,
         ),

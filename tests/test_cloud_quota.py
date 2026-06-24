@@ -8,7 +8,10 @@ import pytest
 
 from fastapi import HTTPException
 
-from cloud.app.quota import ensure_can_generate, quota_snapshot, roll_profile
+from types import SimpleNamespace
+
+import cloud.app.quota as quota_mod
+from cloud.app.quota import ensure_can_generate, quota_snapshot, reserve_beat, roll_profile
 
 
 def _row(
@@ -72,3 +75,65 @@ def test_expired_blocks():
     with pytest.raises(HTTPException) as exc:
         ensure_can_generate(row)
     assert exc.value.status_code == 402
+
+
+# --- reserve_beat (atomic reservation + safe legacy fallback) ----------------
+
+
+class _FakeRPC:
+    def __init__(self, result=None, exc=None):
+        self._result = result
+        self._exc = exc
+
+    def execute(self):
+        if self._exc:
+            raise self._exc
+        return SimpleNamespace(data=self._result)
+
+
+class _FakeClient:
+    def __init__(self, *, rpc_result=None, rpc_exc=None):
+        self._rpc_result = rpc_result
+        self._rpc_exc = rpc_exc
+
+    def rpc(self, _name, _params):
+        return _FakeRPC(self._rpc_result, self._rpc_exc)
+
+
+def test_reserve_beat_atomic_allows():
+    quota_mod._RPC_AVAILABLE = True
+    client = _FakeClient(rpc_result={"allowed": True, "consumed_trial": False})
+    assert reserve_beat(client, "u1", _row()) == {"atomic": True, "was_trial": False}
+
+
+def test_reserve_beat_atomic_marks_trial():
+    quota_mod._RPC_AVAILABLE = True
+    client = _FakeClient(rpc_result={"allowed": True, "consumed_trial": True})
+    assert reserve_beat(client, "u1", _row())["was_trial"] is True
+
+
+def test_reserve_beat_atomic_rejects_monthly():
+    quota_mod._RPC_AVAILABLE = True
+    client = _FakeClient(rpc_result={"allowed": False, "reason": "monthly"})
+    with pytest.raises(HTTPException) as exc:
+        reserve_beat(client, "u1", _row())
+    assert exc.value.status_code == 429
+
+
+def test_reserve_beat_falls_back_when_rpc_missing():
+    quota_mod._RPC_AVAILABLE = True
+    client = _FakeClient(rpc_exc=Exception("Could not find the function plg_consume_beat"))
+    # within limits -> legacy precheck passes, caller will consume after generation
+    assert reserve_beat(client, "u1", _row(beats_used=0, beats_today=0)) == {
+        "atomic": False,
+        "was_trial": False,
+    }
+
+
+def test_reserve_beat_fallback_still_enforces_limit():
+    quota_mod._RPC_AVAILABLE = True
+    client = _FakeClient(rpc_exc=Exception("does not exist"))
+    with pytest.raises(HTTPException) as exc:
+        reserve_beat(client, "u1", _row(beats_used=30))
+    assert exc.value.status_code == 429
+    quota_mod._RPC_AVAILABLE = True  # reset module cache for other tests

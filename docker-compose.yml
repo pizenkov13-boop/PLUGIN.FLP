@@ -1,0 +1,45 @@
+# PLG Cloud API — self-host on any Docker host (RU-friendly: Timeweb / Selectel /
+# Beget / Yandex Cloud VPS, paid in rubles). Caddy terminates TLS with a free
+# Let's Encrypt cert for $PLG_API_DOMAIN.
+#
+#   PLG_API_DOMAIN=api.pluginflp.app docker compose up -d --build
+#
+# Secrets come from cloud/.env (Supabase, Gemini, etc.). The domain's A record
+# must point at this server and ports 80/443 must be open.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: cloud/Dockerfile
+    env_file: cloud/.env
+    environment:
+      PLG_ENV: production
+    expose:
+      - "8787"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8787/health',timeout=4).status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PLG_API_DOMAIN: ${PLG_API_DOMAIN:?set PLG_API_DOMAIN to your domain, e.g. api.pluginflp.app}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

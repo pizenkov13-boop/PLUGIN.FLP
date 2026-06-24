@@ -157,11 +157,11 @@ def build_mix_blueprint(data: dict[str, Any], *, stem_folder: str | None = None)
     meta = data.get("plg_producer_meta") if isinstance(data.get("plg_producer_meta"), dict) else {}
     if bucket in ("opium", "phonk") or meta.get("master_soft_clip"):
         lines.extend([
-            "─── F1LTHY FX RECIPE (exact, plugin names are FL-native) ───",
-            "  808 / SUB:  Fruity Blood Overdrive — Pre-Amp 40%, Color = center (12 o'clock), Post 100%.",
-            "              No Blood Overdrive? Fruity Fast Dist — Pre 88%, Mix 100%.",
-            "  MASTER:     Fruity Soft Clipper — Post-Gain +4 dB, Threshold ~ -3 dB (glue, no digital clip).",
-            "  KICK FIRST: the 808 attack is delayed 15 ms in the MIDI, so the click-kick punches through clean.",
+            f"─── {blueprint_text(locale, 'fx_recipe_header')} ───",
+            f"  {blueprint_text(locale, 'fx_recipe_808')}",
+            f"  {blueprint_text(locale, 'fx_recipe_808_alt')}",
+            f"  {blueprint_text(locale, 'fx_recipe_master')}",
+            f"  {blueprint_text(locale, 'fx_recipe_kick')}",
             "",
         ])
 

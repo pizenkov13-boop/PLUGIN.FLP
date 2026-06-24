@@ -4,11 +4,6 @@ export type FaqItem = { id: string; q: string; a: string };
 
 const EN: FaqItem[] = [
   {
-    id: "cloud_vs_keys",
-    q: "Cloud vs my own API keys?",
-    a: "Cloud subscription includes AI — no Gemini/Anthropic keys. Local mode (Settings) uses your own keys and quota is only on your machine.",
-  },
-  {
     id: "subscribe",
     q: "How do I subscribe?",
     a: "Settings → Subscribe. CIS: 899 ₽/mo via ЮKassa. International pricing opens when Stripe/Paddle is enabled. Checkout opens in your browser.",
@@ -21,7 +16,7 @@ const EN: FaqItem[] = [
   {
     id: "fl_studio",
     q: "Where is my beat / FL Studio?",
-    a: "After Create beat, open the project folder (Help → Open project). Install FL Scripts in Settings, then Open in FL Studio from Home or Session.",
+    a: "After Create beat, open the project folder (Help → About). Install FL Scripts in Settings, then Open in FL Studio from Home.",
   },
   {
     id: "samples",
@@ -47,11 +42,6 @@ const EN: FaqItem[] = [
 
 const RU: FaqItem[] = [
   {
-    id: "cloud_vs_keys",
-    q: "Облако или свои API-ключи?",
-    a: "Подписка Cloud — AI уже включён, ключи не нужны. Локальный режим — свои ключи Gemini/Anthropic в Настройках, квота только на этом ПК.",
-  },
-  {
     id: "subscribe",
     q: "Как оформить подписку?",
     a: "Настройки → Подписаться. СНГ: 899 ₽/мес через ЮKassa. Оплата открывается в браузере.",
@@ -64,7 +54,7 @@ const RU: FaqItem[] = [
   {
     id: "fl_studio",
     q: "Где бит и FL Studio?",
-    a: "После Create beat открой папку проекта (Справка). Установи FL Scripts в Настройках, затем Open in FL Studio.",
+    a: "После Create beat открой папку проекта (Справка → О программе). Установи FL Scripts в Настройках, затем Open in FL Studio на главной.",
   },
   {
     id: "samples",
@@ -89,7 +79,6 @@ const RU: FaqItem[] = [
 ];
 
 const ES: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "¿Nube o mis propias API keys?", a: "La suscripción Cloud incluye IA. El modo local usa tus claves en Ajustes." },
   { id: "subscribe", q: "¿Cómo me suscribo?", a: "Ajustes → Suscribirse. El pago se abre en el navegador." },
   { id: "quota", q: "¿Límites y prueba?", a: "3 beats de prueba, luego 30 cada 30 días (máx. 3/día)." },
   { id: "fl_studio", q: "¿Dónde está mi beat?", a: "Tras crear el beat, abre la carpeta del proyecto en Ayuda e instala los scripts de FL." },
@@ -100,7 +89,6 @@ const ES: FaqItem[] = [
 ];
 
 const PT: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "Nuvem ou minhas API keys?", a: "A assinatura Cloud inclui IA. O modo local usa suas chaves em Configurações." },
   { id: "subscribe", q: "Como assinar?", a: "Configurações → Assinar. Pagamento abre no navegador." },
   { id: "quota", q: "Limites e trial?", a: "3 beats de teste, depois 30 a cada 30 dias (máx. 3/dia)." },
   { id: "fl_studio", q: "Onde está o beat?", a: "Após criar, abra a pasta do projeto em Ajuda e instale os scripts do FL." },
@@ -111,7 +99,6 @@ const PT: FaqItem[] = [
 ];
 
 const ZH: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "云订阅还是自己的 API？", a: "云订阅包含 AI。本地模式在设置中使用你自己的密钥。" },
   { id: "subscribe", q: "如何订阅？", a: "设置 → 订阅，在浏览器中完成支付。" },
   { id: "quota", q: "额度与试用？", a: "3 次试用，之后每 30 天 30 首（每天最多 3 首）。" },
   { id: "fl_studio", q: "节拍在哪里？", a: "创建后在帮助中打开项目文件夹，并安装 FL 脚本。" },
@@ -122,7 +109,6 @@ const ZH: FaqItem[] = [
 ];
 
 const JA: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "クラウドと自分の API キー？", a: "クラウド契約に AI 込み。ローカルは設定で自分のキーを使用。" },
   { id: "subscribe", q: "購読方法は？", a: "設定 → 購読。ブラウザで決済。" },
   { id: "quota", q: "制限とトライアル？", a: "試用 3 ビート、その後 30 日で 30 ビート（1 日 3 まで）。" },
   { id: "fl_studio", q: "ビートの場所は？", a: "作成後、ヘルプからプロジェクトフォルダを開き FL スクリプトをインストール。" },
@@ -133,7 +119,6 @@ const JA: FaqItem[] = [
 ];
 
 const FR: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "Cloud ou mes clés API ?", a: "L'abonnement Cloud inclut l'IA. Le mode local utilise vos clés dans Réglages." },
   { id: "subscribe", q: "Comment s'abonner ?", a: "Réglages → S'abonner. Paiement dans le navigateur." },
   { id: "quota", q: "Limites et essai ?", a: "3 beats d'essai, puis 30 par 30 jours (max 3/jour)." },
   { id: "fl_studio", q: "Où est mon beat ?", a: "Après création, ouvrez le dossier projet dans Aide et installez les scripts FL." },
@@ -144,7 +129,6 @@ const FR: FaqItem[] = [
 ];
 
 const DE: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "Cloud oder eigene API-Keys?", a: "Cloud-Abo enthält KI. Lokaler Modus nutzt deine Keys in Einstellungen." },
   { id: "subscribe", q: "Wie abonnieren?", a: "Einstellungen → Abonnieren. Zahlung im Browser." },
   { id: "quota", q: "Limits und Test?", a: "3 Test-Beats, dann 30 pro 30 Tage (max. 3/Tag)." },
   { id: "fl_studio", q: "Wo ist mein Beat?", a: "Nach Erstellung Projektordner in Hilfe öffnen und FL-Skripte installieren." },
@@ -155,7 +139,6 @@ const DE: FaqItem[] = [
 ];
 
 const AR: FaqItem[] = [
-  { id: "cloud_vs_keys", q: "السحابة أم مفاتيح API الخاصة؟", a: "اشتراك السحابة يشمل الذكاء الاصطناعي. الوضع المحلي يستخدم مفاتيحك في الإعدادات." },
   { id: "subscribe", q: "كيف أشترك؟", a: "الإعدادات → اشتراك. الدفع في المتصفح." },
   { id: "quota", q: "الحدود والتجربة؟", a: "3 إيقاعات تجريبية، ثم 30 كل 30 يومًا (حد أقصى 3/يوم)." },
   { id: "fl_studio", q: "أين الإيقاع؟", a: "بعد الإنشاء افتح مجلد المشروع من المساعدة وثبّت سكربتات FL." },

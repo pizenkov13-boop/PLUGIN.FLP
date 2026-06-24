@@ -9,14 +9,12 @@
 
 .page__head h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+  color: var(--ink);
 }
 
 .page__head p {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--text-3);
+  margin: 10px 0 0;
+  color: var(--ink-dim);
 }
 
 .page__card {
@@ -53,29 +51,52 @@
 
 .page__stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  gap: 12px;
+}
+
+.page__stat-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.page__stat-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .page__stat {
-  padding: 12px 14px;
+  padding: 14px 16px;
+  min-height: 74px;
   border-radius: 12px;
   background: var(--bg-input);
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .page__stat strong {
-  display: block;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 .page__stat span {
+  font-family: var(--font-body);
   font-size: 11px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .page__stat-grid--3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 .page__path {
@@ -99,74 +120,93 @@
 }
 
 .page__pill--ok {
-  color: #7dffb8;
-  border-color: rgba(125, 255, 184, 0.25);
-  background: rgba(125, 255, 184, 0.08);
+  color: var(--ink);
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.page__pill--ok::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .page__pill--warn {
-  color: #ffd27d;
-  border-color: rgba(255, 210, 125, 0.25);
-  background: rgba(255, 210, 125, 0.08);
+  color: var(--ink-dim);
+  border-color: var(--line);
+  background: var(--bg-elev-2);
 }
 
 .page__error {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255, 80, 80, 0.08);
-  border: 1px solid rgba(255, 80, 80, 0.2);
-  color: #ffb4b4;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
   font-size: 13px;
 }
 
 .page__success {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(125, 255, 184, 0.08);
-  border: 1px solid rgba(125, 255, 184, 0.2);
-  color: #b8ffd8;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   font-size: 13px;
 }
 
 .page__btn {
   appearance: none;
-  border: none;
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  border: 1px solid var(--ink);
+  padding: 0 18px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #050505;
   cursor: pointer;
+  transition: box-shadow var(--t) var(--ease), transform var(--t) var(--ease),
+    background var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease);
+}
+
+.page__btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -12px rgba(255, 255, 255, 0.5);
 }
 
 .page__btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .page__btn--ghost {
   background: transparent;
-  color: var(--text-2);
-  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
 }
 
 .page__btn--ghost:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text);
+  border-color: var(--border-strong);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  transform: none;
 }
 
 .page__btn--danger {
-  border: 1px solid rgba(255, 80, 80, 0.35);
-  background: rgba(255, 80, 80, 0.12);
-  color: #ffb4b4;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--ink-dim);
 }
 
 .page__btn--danger:hover:not(:disabled) {
-  background: rgba(255, 80, 80, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
 }
 
 .page__list {

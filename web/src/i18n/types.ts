@@ -13,6 +13,7 @@ export type Messages = {
     library: string;
     tools: string;
     help: string;
+    account: string;
     settings: string;
   };
   fl: { online: string; offline: string };
@@ -42,6 +43,13 @@ export type Messages = {
     starting: string;
     generating: string;
     checkNetwork: string;
+    longWait: string;
+    phases: {
+      generating: string;
+      finalizing: string;
+      done: string;
+      splitting: string;
+    };
     baked: string;
     error: string;
     openingFl: string;
@@ -99,6 +107,11 @@ export type Messages = {
     generating: string;
     openInFl: string;
     yourPrompt: string;
+    describeBeat: string;
+    yourBeat: string;
+    openFolder: string;
+    openMix: string;
+    ideas: string;
     promptPlaceholder: string;
     inspiration: string;
     quickPrompts: string;
@@ -184,6 +197,11 @@ export type Messages = {
     updatesChannel: string;
     steps: string[];
     docs: Record<string, { title: string; desc: string }>;
+  };
+  account: {
+    title: string;
+    desc: string;
+    localDesc: string;
   };
   settings: {
     title: string;
@@ -283,6 +301,8 @@ export type Messages = {
     signingUp: string;
     forgot: string;
     resetSent: string;
+    signupLogin: string;
+    captchaRequired: string;
     logout: string;
     haveAccount: string;
     newAccount: string;
@@ -291,23 +311,32 @@ export type Messages = {
     legalRequired: string;
     aiDisclaimer: string;
   };
-  prompts: {
-    darkTrap: PromptCard;
-    rageMelody: PromptCard;
-    pluggnb: PromptCard;
-    detroit: PromptCard;
-    melodic: PromptCard;
-  };
+  prompts: Record<string, PromptCard>;
 };
 
 /** Locale files may omit keys merged from `en` at runtime. */
 export type LocalePack = Omit<
   Messages,
-  "help" | "settings" | "auth" | "offline" | "regenerate" | "flOnboard" | "updates" | "errors"
+  | "nav"
+  | "help"
+  | "account"
+  | "settings"
+  | "auth"
+  | "offline"
+  | "regenerate"
+  | "flOnboard"
+  | "updates"
+  | "errors"
+  | "status"
 > & {
+  nav?: Partial<Messages["nav"]>;
   errors?: Partial<Messages["errors"]>;
+  status?: Partial<Messages["status"]> & {
+    phases?: Partial<Messages["status"]["phases"]>;
+  };
   auth?: Partial<Messages["auth"]>;
   help?: Partial<Messages["help"]>;
+  account?: Partial<Messages["account"]>;
   settings?: Partial<Messages["settings"]>;
   offline?: Partial<Messages["offline"]>;
   regenerate?: Partial<Messages["regenerate"]>;

@@ -1,0 +1,288 @@
+.settings.account {
+  max-width: 680px;
+}
+
+/* —— Quota dashboard —— */
+.settings__card--quota {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 42%, transparent 100%),
+    var(--bg-card);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.account__quota-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.account__quota-head h2 {
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+.account__quota-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+
+.account__quota-bar-wrap {
+  padding: 18px 22px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.account__quota-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.account__quota-bar-meta span {
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.account__quota-bar-meta span:last-child {
+  text-align: right;
+}
+
+.account__quota-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.account__quota-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), var(--ink));
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
+  transition: width 500ms var(--ease);
+}
+
+.account__quota-bar-nums {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.account__quota-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.account__quota-num strong {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.account__quota-num em {
+  font-family: var(--font-mono);
+  font-size: clamp(14px, 3vw, 16px);
+  font-style: normal;
+  font-weight: 500;
+  color: var(--ink-dim);
+}
+
+.account__quota-num--dim strong {
+  font-size: clamp(18px, 4vw, 22px);
+}
+
+.account__quota-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account__quota-metric {
+  padding: 16px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.account__quota-metric:last-child {
+  border-right: none;
+}
+
+.account__quota-metric-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-dim);
+  line-height: 1.35;
+  min-height: 2.5em;
+}
+
+.account__quota-metric-val {
+  font-family: var(--font-mono);
+  font-size: clamp(20px, 4.5vw, 26px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.account__quota-foot {
+  margin: 0;
+  padding: 12px 22px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* —— Cloud profile —— */
+.settings__card--cloud {
+  gap: 16px;
+}
+
+.account__email {
+  margin: -4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  word-break: break-all;
+}
+
+.account__plan {
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account__plan-status {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.account__plan-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.account__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.account__legal {
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.account__legal-title {
+  margin: 0 0 12px;
+  color: var(--ink-dim);
+}
+
+.account__legal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.account__legal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account__legal-link {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.account__legal-link:hover {
+  color: var(--ink-dim);
+}
+
+.account__legal-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 520px) {
+  .account__quota-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .account__quota-metric {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 0;
+    padding: 12px 22px;
+  }
+
+  .account__quota-metric-label {
+    min-height: 0;
+  }
+
+  .account__quota-metric:last-child {
+    border-bottom: none;
+  }
+}

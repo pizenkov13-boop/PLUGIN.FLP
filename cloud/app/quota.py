@@ -149,6 +149,82 @@ def consume_beat(client: Client, user_id: str, row: dict[str, Any]) -> dict[str,
     return snap
 
 
+_RPC_AVAILABLE = True
+
+
+def _reject(reason: str) -> HTTPException:
+    if reason == "trial_ended":
+        return HTTPException(402, f"Trial ended ({TRIAL_BEATS} free beats). Subscribe to continue.")
+    if reason == "monthly":
+        return HTTPException(
+            429, f"Monthly limit reached ({BEAT_LIMIT} beats / {PERIOD_DAYS} days). Renew or wait for reset."
+        )
+    if reason == "daily":
+        return HTTPException(
+            429, f"Daily limit reached ({DAILY_BEAT_LIMIT} beats / day). Try again tomorrow."
+        )
+    return HTTPException(402, "Subscription inactive. Renew to generate beats.")
+
+
+def reserve_beat(client: Client, user_id: str, row: dict[str, Any]) -> dict[str, Any]:
+    """Atomically reserve ONE beat credit *before* the expensive LLM call.
+
+    Uses the row-locked `plg_consume_beat` RPC so concurrent requests on the same
+    account can't each pass the check and over-generate / over-spend (the read-
+    check-write race in the old flow). Falls back to the legacy check-then-consume
+    path when the migration (008) isn't applied yet, so code can ship first.
+
+    Returns {"atomic": bool, "was_trial": bool}. Raises HTTPException if over limit.
+    """
+    global _RPC_AVAILABLE
+    was_trial = str(row.get("status") or "") == "trial"
+
+    if _RPC_AVAILABLE:
+        try:
+            resp = client.rpc(
+                "plg_consume_beat",
+                {
+                    "p_user": user_id,
+                    "p_beat_limit": BEAT_LIMIT,
+                    "p_daily_limit": DAILY_BEAT_LIMIT,
+                    "p_trial_beats": TRIAL_BEATS,
+                    "p_period_days": PERIOD_DAYS,
+                },
+            ).execute()
+            data = resp.data
+            if isinstance(data, list):
+                data = data[0] if data else None
+            if isinstance(data, dict):
+                if data.get("allowed"):
+                    return {"atomic": True, "was_trial": bool(data.get("consumed_trial"))}
+                raise _reject(str(data.get("reason") or ""))
+            logger.warning("plg_consume_beat returned unexpected shape: %r", data)
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc).lower()
+            if any(s in msg for s in ("plg_consume_beat", "does not exist", "pgrst202", "could not find the function")):
+                _RPC_AVAILABLE = False
+                logger.warning(
+                    "plg_consume_beat RPC missing — using legacy quota path. "
+                    "Apply migration 008_atomic_quota.sql to close the concurrency race."
+                )
+            else:
+                logger.warning("plg_consume_beat RPC error, using legacy path: %s", exc)
+
+    # Legacy fallback: pre-check now; caller calls consume_beat() after generation.
+    ensure_can_generate(row)
+    return {"atomic": False, "was_trial": was_trial}
+
+
+def refund_beat(client: Client, user_id: str, *, was_trial: bool) -> None:
+    """Return a reserved credit if generation fails after reservation."""
+    try:
+        client.rpc("plg_refund_beat", {"p_user": user_id, "p_was_trial": was_trial}).execute()
+    except Exception:  # noqa: BLE001
+        logger.exception("refund_beat failed user=%s", user_id)
+
+
 def _maybe_notify_quota_limit(
     client: Client,
     user_id: str,

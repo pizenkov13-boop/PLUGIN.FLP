@@ -1,4 +1,4 @@
-"""Producer-brain LLM instructions — Opium / F1LTHY / genre branches."""
+"""Producer-brain LLM instructions — genre branches without artist/label names."""
 
 PRODUCER_BRAIN_BLOCK = """
 PRODUCER BRAIN (PLG applies code humanization after you — still follow these when writing MIDI):
@@ -13,7 +13,7 @@ LOW END
 - 808 slides ONLY as short high notes (+1–2 octaves) at end of 4th bar — NOT low-register slides.
 - Drop tension: remove kick + 808 for last ½ beat before phrase drop (bar 4 beat 3.5–4).
 
-MELODY (OPIUM / RAGE)
+MELODY (DARK TRAP / RAGE)
 - NO happy major hooks. Phrygian / natural minor, tritones, diminished colour. Dark simple hooks, rests every 2 bars.
 - Optional counter_melody track: fast bell/pluck answers in gaps — never fight main melody.
 - Space for vocals — minimal clutter.
@@ -26,8 +26,8 @@ STRUCTURE
 - build_order: kick, snare, clap, sub_808, hi_hats, melody_lead, samples, fx_automation.
 - Optional tracks: counter_melody (sparse), snare_layer (rim — PLG duplicates snare if omitted).
 
-GENRE FORKS (match prompt):
-- opium/rage/ken/f1lthy: rules above, BPM 140–170, fx_automation distortion on 808.
+GENRE FORKS (match prompt — never echo artist or label names in output):
+- dark trap / rage: rules above, BPM 140–170, fx_automation distortion on 808.
 - travis/metro atmospheric trap: half-time feel, sparse drums, long 808, triplet hat rolls.
 - phonk/drift: 150–165 BPM, cowbell melody, crushed master, phonk vocals OK in library_refs.
 - pop dance (dua/weeknd): four-on-floor kick 115–124, sidechain feel, brighter but still minor.

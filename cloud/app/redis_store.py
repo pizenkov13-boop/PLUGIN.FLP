@@ -6,31 +6,50 @@ import logging
 import time
 from typing import Any
 
-from cloud.app.config import REDIS_URL
+from cloud.app.config import PLG_ENV, REDIS_URL
 
 logger = logging.getLogger("plg.redis")
 
 _client: Any = None
-_checked = False
+_last_attempt = 0.0
+_RECONNECT_COOLDOWN = 30.0  # don't reconnect-storm, but don't give up forever
 
 
 def redis_client() -> Any | None:
-    global _client, _checked
-    if _checked:
+    """Connected Redis client, or None (callers fall back to in-memory).
+
+    Unlike a one-shot check, this retries every ~30s after a failure so a brief
+    Redis blip doesn't permanently demote distributed limits to per-process for
+    the whole process lifetime. In production a missing/broken Redis is logged at
+    ERROR (per-process limits effectively multiply by worker count).
+    """
+    global _client, _last_attempt
+    if _client is not None:
         return _client
-    _checked = True
-    if not REDIS_URL:
+
+    now = time.monotonic()
+    if now - _last_attempt < _RECONNECT_COOLDOWN:
         return None
+    _last_attempt = now
+
+    if not REDIS_URL:
+        if PLG_ENV == "production":
+            logger.error("REDIS_URL not set in production — rate limits are per-process only.")
+        return None
+
     try:
         import redis
 
-        _client = redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=2.0)
-        _client.ping()
+        client = redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=2.0)
+        client.ping()
+        _client = client
         logger.info("Redis connected (Upstash)")
         return _client
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable, using in-memory fallback: %s", exc)
-        _client = None
+        if PLG_ENV == "production":
+            logger.error("Redis unavailable in production — limits degraded: %s", exc)
+        else:
+            logger.warning("Redis unavailable, using in-memory fallback: %s", exc)
         return None
 
 

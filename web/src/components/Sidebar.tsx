@@ -1,56 +1,92 @@
 import type { View } from "../types/ui";
+import type { Quota } from "../types";
 import { useI18n } from "../i18n";
-import { IconFl, IconHelp, IconHome, IconLibrary, IconSettings, IconTools, IconWave } from "./icons";
-import logoImg from "../../../assets/logo.png";
+import PlgLogo from "./PlgLogo";
+import LangSwitcher from "./LangSwitcher";
+import { IconAccount, IconHelp, IconHome, IconLibrary, IconSettings, IconTools } from "./icons";
 import "./Sidebar.css";
 
 const NAV: { id: View; icon: typeof IconHome }[] = [
   { id: "home", icon: IconHome },
-  { id: "session", icon: IconWave },
   { id: "library", icon: IconLibrary },
   { id: "tools", icon: IconTools },
   { id: "help", icon: IconHelp },
-  { id: "settings", icon: IconSettings },
 ];
 
 type Props = {
   view: View;
   onNavigate: (view: View) => void;
-  beatReady: boolean;
-  flReady: boolean;
-  quotaLabel?: string;
+  quota?: Quota | null;
+  authEmail?: string | null;
 };
 
-export default function Sidebar({ view, onNavigate, beatReady, flReady, quotaLabel }: Props) {
+export default function Sidebar({ view, onNavigate, quota, authEmail }: Props) {
   const { t } = useI18n();
+  const showQuota = quota && !quota.skipped;
+  const pct = showQuota ? Math.round((quota.remaining / quota.limit) * 100) : 0;
 
   return (
     <aside className="sidebar">
-      <div className="sidebar__brand">
-        <img className="sidebar__logo" src={logoImg} alt="PLG" />
-        <span className="sidebar__name">PLUGIN.FLP</span>
+      <div className="sidebar__brand" aria-hidden>
+        <PlgLogo className="sidebar__logo" />
       </div>
 
-      <nav className="sidebar__nav">
-        {NAV.map(({ id, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={`sidebar__item ${view === id ? "sidebar__item--active" : ""}`}
-            onClick={() => onNavigate(id)}
-          >
-            <Icon />
-            <span>{t(`nav.${id}`)}</span>
-            {id === "session" && beatReady && <span className="sidebar__badge" />}
-          </button>
-        ))}
-      </nav>
+      <div className="sidebar__stack">
+        <nav className="sidebar__nav" aria-label="Main">
+          {NAV.map(({ id, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`sidebar__item ${view === id ? "sidebar__item--active" : ""}`}
+              onClick={() => onNavigate(id)}
+            >
+              <Icon />
+              <span>{t(`nav.${id}`)}</span>
+            </button>
+          ))}
+        </nav>
 
-      <div className="sidebar__footer">
-        {quotaLabel && <div className="sidebar__quota">{quotaLabel}</div>}
-        <div className={`sidebar__fl ${flReady ? "sidebar__fl--ok" : ""}`}>
-          <IconFl />
-          <span>{flReady ? t("fl.online") : t("fl.offline")}</span>
+        <div className="sidebar__foot">
+          {showQuota && (
+            <div
+              className="sidebar__quota"
+              title={t("quota.label", {
+                remaining: quota.remaining,
+                limit: quota.limit,
+                days: quota.days_until_reset,
+              })}
+            >
+              <span className="sidebar__quota-label">{t("quota.remaining")}</span>
+              <div className="sidebar__quota-nums">
+                <strong>{quota.remaining}</strong>
+                <span className="sidebar__quota-dim">/{quota.limit}</span>
+              </div>
+              <div className="sidebar__quota-track" aria-hidden>
+                <div className="sidebar__quota-fill" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )}
+
+          <LangSwitcher dropUp />
+
+          <button
+            type="button"
+            className={`sidebar__item ${view === "account" ? "sidebar__item--active" : ""}`}
+            onClick={() => onNavigate("account")}
+            title={authEmail ?? undefined}
+          >
+            <IconAccount />
+            <span>{t("nav.account")}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`sidebar__item ${view === "settings" ? "sidebar__item--active" : ""}`}
+            onClick={() => onNavigate("settings")}
+          >
+            <IconSettings />
+            <span>{t("nav.settings")}</span>
+          </button>
         </div>
       </div>
     </aside>

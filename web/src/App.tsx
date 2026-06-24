@@ -9,17 +9,16 @@ import {
 } from "./api";
 import type { ApiResult, BeatResult, JobSnapshot, Status } from "./types";
 import type { View } from "./types/ui";
-import { formatQuotaLabel, useI18n } from "./i18n";
+import { useI18n } from "./i18n";
 import { setUiLocale } from "./api";
 import AuthView from "./components/AuthView";
 import HomeView from "./components/HomeView";
-import SessionView from "./components/SessionView";
 import LibraryView from "./components/LibraryView";
 import ToolsView from "./components/ToolsView";
 import HelpView from "./components/HelpView";
+import AccountView from "./components/AccountView";
 import SettingsView from "./components/SettingsView";
 import Sidebar from "./components/Sidebar";
-import TopBar from "./components/TopBar";
 import PlayerBar from "./components/PlayerBar";
 import OfflineBanner from "./components/OfflineBanner";
 import FlOnboardingBanner from "./components/FlOnboardingBanner";
@@ -54,6 +53,7 @@ export default function App() {
   async function refreshStatus() {
     const s = await getStatus();
     setStatus(s);
+    setPrompt((prev) => (prev.trim() ? prev : s.last_prompt?.trim() ?? ""));
     if (s.cloud_mode && !s.signed_in) {
       setStatusLine(t("auth.title"));
       return;
@@ -62,16 +62,23 @@ export default function App() {
       setStatusLine(t("offline.title"));
       return;
     }
-    if (!s.has_api_key) setStatusLine(t("status.needApiKey"));
+    if (!s.cloud_mode && !s.has_api_key) setStatusLine(t("status.needApiKey"));
     else if (s.beat_ready) setStatusLine(t("status.readyOpenFl"));
     else setStatusLine(t("status.readyDescribe"));
+  }
+
+  function phaseLabel(phase: string): string {
+    const key = `status.phases.${phase}`;
+    const label = t(key);
+    return label !== key ? label : phase;
   }
 
   function onJobUpdate(snap: JobSnapshot) {
     if (snap.status === "running") {
       const secs = Math.floor(snap.elapsed);
-      const tail = secs >= 75 ? t("status.checkNetwork") : "";
-      setStatusLine(t("status.generating", { secs, phase: snap.phase }) + tail);
+      const tail =
+        secs >= 75 ? (status?.cloud_mode ? t("status.longWait") : t("status.checkNetwork")) : "";
+      setStatusLine(t("status.generating", { secs, phase: phaseLabel(snap.phase) }) + tail);
     }
   }
 
@@ -84,7 +91,6 @@ export default function App() {
     setStatusLine(t("status.baked"));
     const result = (final.result ?? { ok: true }) as unknown as BeatResult;
     if (result.ok) setLastBeat(result);
-    setView("session");
     await refreshStatus();
     if (result.auto_open_fl) await onOpenInFl();
   }
@@ -161,12 +167,11 @@ export default function App() {
   }
 
   const quota = status?.quota;
-  const quotaLabel = quota && !quota.skipped ? formatQuotaLabel(t, quota) : undefined;
   const beatReady = status?.beat_ready ?? false;
-  const flReady = status?.fl_bridge_ready ?? false;
+  const hasSession = Boolean(status?.last_prompt?.trim() || lastBeat);
+  const showBeatReady = beatReady && hasSession;
   const hasPrompt = Boolean(prompt.trim());
   const canCreate = hasPrompt && !busy && !(status?.cloud_mode && status.network_online === false);
-  const showTopSearch = view === "home";
   const needsAuth = Boolean(status?.cloud_mode && !status?.signed_in);
   const networkOnline = status?.network_online !== false;
 
@@ -179,60 +184,38 @@ export default function App() {
   }
 
   return (
-    <div className="shell">
+    <div className="shell shell--app">
       <Sidebar
         view={view}
         onNavigate={setView}
-        beatReady={beatReady}
-        flReady={flReady}
-        quotaLabel={quotaLabel}
+        quota={quota}
+        authEmail={status?.auth_email}
       />
 
-      <div className="shell__main">
-        <OfflineBanner online={networkOnline} cloudMode={status?.cloud_mode} />
-        {(view === "home" || view === "session") && (
-          <FlOnboardingBanner status={status} onInstalled={refreshStatus} />
-        )}
+      <div className="shell__stage">
+        <div className="shell__main">
+        <div className="shell__banners">
+          <OfflineBanner online={networkOnline} cloudMode={status?.cloud_mode} />
+          {(view === "home") && (
+            <FlOnboardingBanner status={status} onInstalled={refreshStatus} />
+          )}
+        </div>
 
-        {showTopSearch && (
-          <TopBar
-            value={prompt}
-            onChange={setPrompt}
-            onSubmit={onCreate}
-            disabled={busy}
-            provider={status?.provider}
-          />
-        )}
-
-        <main className="shell__content">
+        <main className={`shell__content ${view === "home" ? "shell__content--focus" : ""}`}>
           {view === "home" && (
             <HomeView
               prompt={prompt}
               onPromptChange={setPrompt}
-              onSelectPrompt={setPrompt}
               onCreate={onCreate}
               onOpenInFl={onOpenInFl}
               onRegenerate={onRegenerate}
               busy={busy}
               canCreate={canCreate}
-              beatReady={beatReady}
+              showBeatReady={showBeatReady}
               error={error}
-              status={status}
-              filter={prompt}
-            />
-          )}
-          {view === "session" && (
-            <SessionView
+              statusLine={statusLine}
               status={status}
               lastBeat={lastBeat}
-              statusLine={statusLine}
-              busy={busy}
-              beatReady={beatReady}
-              prompt={prompt}
-              onOpenInFl={onOpenInFl}
-              onCreate={onCreate}
-              onRegenerate={onRegenerate}
-              canCreate={canCreate}
               onToolResult={(result) => {
                 setLastBeat(result as unknown as BeatResult);
                 setStatusLine((result as ApiResult).message?.toString() ?? t("common.updated"));
@@ -241,23 +224,21 @@ export default function App() {
               onRefresh={refreshStatus}
             />
           )}
-          {view === "settings" && (
-            <SettingsView onSaved={refreshStatus} cloudMode={status?.cloud_mode} authEmail={status?.auth_email} />
+          {view === "account" && (
+            <AccountView
+              onSaved={refreshStatus}
+              cloudMode={status?.cloud_mode}
+              authEmail={status?.auth_email}
+            />
           )}
+          {view === "settings" && <SettingsView onSaved={refreshStatus} />}
           {view === "library" && <LibraryView />}
           {view === "tools" && <ToolsView />}
           {view === "help" && <HelpView />}
         </main>
 
-        <PlayerBar
-          busy={busy}
-          beatReady={beatReady}
-          statusLine={statusLine}
-          quotaLabel={quotaLabel}
-          canCreate={canCreate}
-          onOpenInFl={onOpenInFl}
-          onCreate={onCreate}
-        />
+        <PlayerBar busy={busy} showBeatReady={showBeatReady} />
+      </div>
       </div>
     </div>
   );

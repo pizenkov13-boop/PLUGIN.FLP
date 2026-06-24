@@ -3,76 +3,25 @@ import {
   bakeSession,
   getStatus,
   installFlScripts,
-  pickAudioFile,
   pickFolder,
-  pollJob,
-  revealPath,
   scanLibrary,
-  startStemSplit,
-  stemsStatus,
   importKitFolder,
 } from "../api";
-import type { JobSnapshot, Status } from "../types";
+import type { Status } from "../types";
 import { useI18n } from "../i18n";
-import { apiErrorMessage, jobErrorMessage } from "../errors";
+import { apiErrorMessage } from "../errors";
 import "./PageView.css";
 
 export default function ToolsView() {
   const { t } = useI18n();
   const [status, setStatus] = useState<Status | null>(null);
-  const [demucs, setDemucs] = useState<{ available: boolean; hint: string } | null>(null);
-  const [stemFile, setStemFile] = useState<string | null>(null);
-  const [stemBusy, setStemBusy] = useState(false);
-  const [stemLine, setStemLine] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getStatus().then(setStatus);
-    stemsStatus().then((s) => {
-      if (s.ok) setDemucs({ available: Boolean(s.available), hint: String(s.hint ?? "") });
-    });
   }, []);
-
-  function onStemUpdate(snap: JobSnapshot) {
-    if (snap.status === "running") {
-      setStemLine(`${snap.phase} · ${Math.floor(snap.elapsed)}s`);
-    }
-  }
-
-  async function onPickStemFile() {
-    setError(null);
-    const pick = await pickAudioFile();
-    if (!pick.ok) {
-      if (!pick.cancelled) setError(apiErrorMessage(pick, t));
-      return;
-    }
-    setStemFile(pick.path ?? null);
-  }
-
-  async function onStemSplit() {
-    if (!stemFile || stemBusy) return;
-    setStemBusy(true);
-    setError(null);
-    setMessage(null);
-    setStemLine(t("status.starting"));
-    try {
-      const handle = await startStemSplit(stemFile);
-      const final = await pollJob(handle.job_id, onStemUpdate);
-      if (final.status === "error") {
-        setError(jobErrorMessage(final, t));
-        setStemLine("");
-      } else {
-        const out = final.result as { output_dir?: string; message?: string } | null;
-        setMessage(out?.message ?? t("common.updated"));
-        if (out?.output_dir) await revealPath(out.output_dir);
-        setStemLine("");
-      }
-    } finally {
-      setStemBusy(false);
-    }
-  }
 
   async function onInstallScripts() {
     setBusy(true);
@@ -140,32 +89,6 @@ export default function ToolsView() {
       <div className="page__head">
         <h1>{t("tools.title")}</h1>
         <p>{t("tools.desc")}</p>
-      </div>
-
-      <div className="page__card">
-        <h2 className="page__card-title">{t("tools.stemSplit")}</h2>
-        <p className="page__card-desc">{t("tools.stemSplitDesc")}</p>
-        <div className="page__row">
-          <span className={`page__pill ${demucs?.available ? "page__pill--ok" : "page__pill--warn"}`}>
-            {demucs?.available ? t("tools.demucsReady") : t("tools.demucsOffline")}
-          </span>
-          {!demucs?.available && demucs?.hint && <span className="page__path">{demucs.hint}</span>}
-        </div>
-        <p className="page__path">{stemFile ?? t("tools.noFile")}</p>
-        <div className="page__row">
-          <button type="button" className="page__btn page__btn--ghost" onClick={onPickStemFile}>
-            {t("tools.pickAudio")}
-          </button>
-          <button
-            type="button"
-            className="page__btn"
-            onClick={onStemSplit}
-            disabled={!stemFile || stemBusy || !demucs?.available}
-          >
-            {stemBusy ? t("tools.splitting") : t("tools.splitStems")}
-          </button>
-        </div>
-        {stemLine && <p className="page__card-desc">{stemLine}</p>}
       </div>
 
       <div className="page__card">

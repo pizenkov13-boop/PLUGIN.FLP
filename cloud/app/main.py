@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from supabase import Client
 
 from cloud.app.abuse import record_generation_ip, list_alerts
@@ -16,11 +16,15 @@ from cloud.app.admin import ack_alert, admin_dashboard, ban_entity, require_admi
 from cloud.app.auth import current_user, profile_row, service_client
 from cloud.app.billing import billing_snapshot, pick_checkout_provider, resolve_price_tier
 from cloud.app.config import (
+    ALLOWED_ORIGINS,
     APP_VERSION,
     CAPTCHA_PROVIDER,
     HCAPTCHA_SITE_KEY,
-    MIN_CLIENT_VERSION,
+    MAX_BODY_BYTES,
+    MAX_PROMPT_CHARS,
     TURNSTILE_SITE_KEY,
+    YOOKASSA_VERIFY_IP,
+    YOOKASSA_WEBHOOK_IPS,
 )
 from cloud.app.captcha import captcha_required
 from cloud.app.devices import register_device, touch_device
@@ -29,11 +33,24 @@ from cloud.app.llm_proxy import generate_beat_pattern
 from cloud.app.prompt_guard import sanitize_prompt
 from cloud.app.providers import paddle_provider, stripe_provider, yookassa_provider
 from cloud.app.queue import llm_slot
-from cloud.app.quota import consume_beat, ensure_can_generate, quota_snapshot, roll_profile, save_profile
-from cloud.app.rate_limit import check_generate_limits, check_ip_limit, record_ip_hit
+from cloud.app.quota import (
+    consume_beat,
+    quota_snapshot,
+    refund_beat,
+    reserve_beat,
+    roll_profile,
+    save_profile,
+)
+from cloud.app.rate_limit import (
+    check_generate_limits,
+    check_ip_limit,
+    check_signup_limit,
+    record_ip_hit,
+)
 from cloud.app.security import (
     client_ip,
     enforce_not_banned,
+    ip_in_allowlist,
     require_registered_device,
 )
 from cloud.app.signup import signup_user
@@ -54,13 +71,40 @@ logger = logging.getLogger("plg.cloud")
 
 app = FastAPI(title="PLG Cloud API", version=APP_VERSION)
 
+# Desktop client authenticates with Bearer tokens, not cookies — credentials off
+# (and "*" + credentials is an invalid combo). Lock origins via PLG_ALLOWED_ORIGINS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+}
+
+
+@app.middleware("http")
+async def hardening_middleware(request: Request, call_next):
+    # Reject oversized bodies up front (defends the LLM endpoint from giant
+    # catalog/user_profile payloads driving cost/memory).
+    cl = request.headers.get("content-length")
+    if cl:
+        try:
+            if int(cl) > MAX_BODY_BYTES:
+                return JSONResponse(status_code=413, content={"detail": "Request body too large."})
+        except ValueError:
+            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length."})
+    response = await call_next(request)
+    for key, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(key, value)
+    return response
 
 _PUBLIC_PREFIXES = (
     "/health",
@@ -95,11 +139,11 @@ class DeviceBody(BaseModel):
 
 
 class GenerateBody(BaseModel):
-    prompt: str
+    prompt: str = Field(min_length=1, max_length=MAX_PROMPT_CHARS)
     catalog: dict[str, Any] | None = None
     user_profile: dict[str, Any] | None = None
-    device_id: str | None = None
-    locale: str | None = None
+    device_id: str | None = Field(default=None, max_length=200)
+    locale: str | None = Field(default=None, max_length=16)
 
 
 class CheckoutBody(BaseModel):
@@ -209,6 +253,7 @@ def waitlist_join(body: WaitlistBody) -> dict[str, Any]:
 async def auth_signup(body: SignupBody, request: Request) -> dict[str, Any]:
     client = service_client()
     ip = client_ip(request)
+    check_signup_limit(ip)
     return await signup_user(
         client,
         email=body.email,
@@ -305,27 +350,43 @@ def generate(
         raise HTTPException(503, "Maintenance in progress. Try again shortly.")
 
     enforce_not_banned(client, user_id=user_id, device_id=device_id, ip=ip)
-    check_generate_limits(user_id)
     device_id = require_registered_device(client, user_id, device_id)
 
     row = roll_profile(profile_row(client, user_id))
-    row = ensure_can_generate(row)
-
     plan = str(row.get("plan") or "base")
     check_kill_switch(client, plan)
 
+    # Rate-limit immediately before the atomic reserve + LLM: a user's cooldown/
+    # hourly budget is only spent on requests that actually proceed to generate,
+    # not ones rejected by ban/device/kill-switch. IP-level load-shedding already
+    # runs in the middleware.
+    check_generate_limits(user_id)
+
+    # Reserve one credit ATOMICALLY before the expensive LLM call so concurrent
+    # requests on the same account can't over-generate / over-spend. Refund if
+    # generation fails. (Falls back to legacy check-then-consume pre-migration.)
+    reservation = reserve_beat(client, user_id, row)
+
     prompt = sanitize_prompt(body.prompt)
 
-    with llm_slot():
-        pattern, meta = generate_beat_pattern(
-            prompt,
-            plan=plan,
-            catalog=body.catalog,
-            user_profile=body.user_profile,
-            locale=body.locale,
-        )
+    try:
+        with llm_slot():
+            pattern, meta = generate_beat_pattern(
+                prompt,
+                plan=plan,
+                catalog=body.catalog,
+                user_profile=body.user_profile,
+                locale=body.locale,
+            )
+    except Exception:
+        if reservation["atomic"]:
+            refund_beat(client, user_id, was_trial=reservation["was_trial"])
+        raise
 
-    quota = consume_beat(client, user_id, row)
+    if not reservation["atomic"]:
+        consume_beat(client, user_id, row)
+
+    quota = quota_snapshot(roll_profile(profile_row(client, user_id)))
     record_spend(client, plan, meta.get("cost_usd"))
 
     client.table("generation_logs").insert(
@@ -420,6 +481,14 @@ def billing_checkout(
 
 @app.post("/v1/billing/webhooks/yookassa")
 async def webhook_yookassa(request: Request) -> dict[str, str]:
+    # YooKassa has no webhook signature — gate on its published source IPs so the
+    # endpoint can't be spammed (the handler still re-fetches the payment from the
+    # API, so this is anti-DoS, not the anti-forgery guard).
+    if YOOKASSA_VERIFY_IP and YOOKASSA_WEBHOOK_IPS:
+        ip = client_ip(request)
+        if not ip_in_allowlist(ip, YOOKASSA_WEBHOOK_IPS):
+            logger.warning("yookassa webhook rejected: source ip=%s not in allowlist", ip)
+            raise HTTPException(403, "Forbidden.")
     client = service_client()
     body = await request.json()
     return yookassa_provider.handle_webhook(client, body)

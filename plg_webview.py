@@ -44,8 +44,9 @@ from starter_kit import ensure_starter_kit
 logger = logging.getLogger("plg.webview")
 
 WINDOW_TITLE = "PLG — PLUGIN.FLP"
-WIN_W, WIN_H = 1100, 720
-WIN_MIN_W, WIN_MIN_H = 900, 600
+# Fixed plugin-sized window — matches the old tk UI (no resize / no maximize).
+# Keeps the layout tight instead of floating in a huge maximized black void.
+WIN_W, WIN_H = 980, 680
 DEV_URL = os.environ.get("PLG_DEV_URL", "http://localhost:5173")
 BG_COLOR = "#0A0A0A"
 
@@ -279,7 +280,9 @@ def main() -> None:
         js_api=Api(),
         width=WIN_W,
         height=WIN_H,
-        min_size=(WIN_MIN_W, WIN_MIN_H),
+        resizable=False,
+        fullscreen=False,
+        maximized=False,
         background_color=BG_COLOR,
     )
     # debug=True opens devtools and is handy while building the UI.

@@ -1,4 +1,4 @@
-"""PLG Quantize Opium — loose, swung quantize (not robotic).
+"""PLG Loose Quantize — loose, swung quantize (not robotic).
 
 Pulls notes toward a grid, then re-introduces groove:
   * Swing      delays the off-beat 1/16s (classic FL swing feel), independent of
@@ -6,7 +6,7 @@ Pulls notes toward a grid, then re-introduces groove:
   * Looseness  adds a touch of random timing so it never sounds machine-perfect.
 
 Strength 1.0 + Swing 0 + Looseness 0 = hard quantize. Dial swing/looseness up for
-that opium/trap drag.
+trap swing / loose pocket.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ GRID_FACTOR = {"1/8": 0.5, "1/16": 0.25, "1/16 triplet": 1.0 / 6.0, "1/4": 1.0}
 
 def createDialog():
     form = flp.ScriptDialog(
-        "PLG Quantize Opium",
+        "PLG Loose Quantize",
         "Loose, swung quantize. Strength pulls to grid; swing drags the off-1/16s.",
     )
     form.addInputCombo("Grid", GRIDS, 1)
@@ -55,10 +55,9 @@ def apply(form):
 
     targets = _target_indices(only_selected)
     if not targets:
-        flp.Utils.ShowMessage("PLG Quantize Opium: nothing to quantize.")
+        flp.Utils.ShowMessage("PLG Loose Quantize: nothing to quantize.")
         return
 
-    # swing always references the 1/16 grid, regardless of the quantize grid
     sixteenth = max(1, int(round(flp.score.PPQ * 0.25)))
 
     for i in targets:
@@ -68,7 +67,6 @@ def apply(form):
         grid_pos = slot * grid_ticks
         new_time = note.time + strength * (grid_pos - note.time)
 
-        # delay the off-beat 1/16s by up to half a 1/16 (full swing)
         if swing > 0 and int(round(new_time / sixteenth)) % 2 == 1:
             new_time += swing * sixteenth * 0.5
 

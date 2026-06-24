@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from cloud.app.moderation import moderate_prompt
 from cloud.app.rate_limit import SlidingWindow, check_generate_limits
-from cloud.app.security import check_honeypot, fingerprint
+from cloud.app.security import check_honeypot, fingerprint, ip_in_allowlist
 
 
 def test_honeypot_blocks():
@@ -42,6 +42,17 @@ def test_sliding_window():
     assert w.allow("k", 2, 60.0)
     assert w.allow("k", 2, 60.0)
     assert not w.allow("k", 2, 60.0)
+
+
+def test_ip_allowlist():
+    cidrs = ["185.71.76.0/27", "77.75.156.11", "2a02:5180::/32"]
+    assert ip_in_allowlist("185.71.76.5", cidrs)
+    assert ip_in_allowlist("77.75.156.11", cidrs)
+    assert ip_in_allowlist("2a02:5180:1::abcd", cidrs)
+    assert not ip_in_allowlist("8.8.8.8", cidrs)
+    assert not ip_in_allowlist("77.75.156.12", cidrs)
+    assert not ip_in_allowlist("", cidrs)
+    assert not ip_in_allowlist("not-an-ip", cidrs)
 
 
 def test_generate_cooldown():

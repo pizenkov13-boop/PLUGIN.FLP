@@ -8,7 +8,9 @@ Server-side auth proxy, quota, billing, and beat generation. API keys never ship
 
 ## Setup
 
-
+**Quick start (RU):** [`cloud/supabase/SETUP_RU.md`](supabase/SETUP_RU.md)  
+**One-shot SQL:** [`cloud/supabase/setup_all.sql`](supabase/setup_all.sql)  
+**Auto `.env`:** `scripts\setup_supabase.bat`
 
 1. Create a [Supabase](https://supabase.com) project.
 

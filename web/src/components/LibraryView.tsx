@@ -103,7 +103,7 @@ export default function LibraryView() {
       {scan?.ok && (
         <div className="page__card">
           <h2 className="page__card-title">{t("library.stats")}</h2>
-          <div className="page__stat-grid">
+          <div className="page__stat-grid page__stat-grid--2">
             <div className="page__stat">
               <strong>{scan.audio_total ?? 0}</strong>
               <span>{t("library.audio")}</span>

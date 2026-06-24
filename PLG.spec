@@ -32,9 +32,20 @@ if bundled_dir.is_dir():
 
 asset_files = [
     (str(root / "assets" / name), "assets")
-    for name in ("logo.svg", "logo.png", "Frame 2.svg", "prompt_tags.json", "mix_blueprint_i18n.json")
+    for name in (
+        "logo.svg",
+        "logo.png",
+        "logo.ico",
+        "logo_icon.png",
+        "Frame 2.svg",
+        "prompt_tags.json",
+        "mix_blueprint_i18n.json",
+    )
     if (root / "assets" / name).is_file()
 ]
+
+icon_path = root / "assets" / "logo.ico"
+exe_icon = str(icon_path) if icon_path.is_file() else None
 
 font_files = [
     (str(path), "assets/fonts")
@@ -42,8 +53,11 @@ font_files = [
 ]
 
 web_dist = root / "web" / "dist"
+# PyInstaller's datas dest is the target *directory*, not the file path — so use
+# the file's parent dir. (Using the full path nested index.html under a folder
+# literally named "index.html", which broke the built UI at runtime.)
 web_files = [
-    (str(path), str(Path("web/dist") / path.relative_to(web_dist)))
+    (str(path), str(Path("web/dist") / path.relative_to(web_dist).parent))
     for path in web_dist.rglob("*")
     if path.is_file()
 ] if web_dist.is_dir() else []
@@ -112,7 +126,16 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Demucs/torch stem-splitting is an optional, separately-installed feature
+    # (stem_split.py imports it lazily and degrades gracefully). Keep the ~200 MB
+    # torch stack out of the shipped exe so it stays lean (~50 MB).
+    excludes=[
+        "torch",
+        "torchaudio",
+        "torchvision",
+        "demucs",
+        "tensorflow",
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -141,5 +164,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon=exe_icon,
 )

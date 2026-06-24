@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Any
 
 import httpx
@@ -13,6 +14,9 @@ from plg_device import get_device_id, get_device_name
 from plg_session_store import clear_session, load_session, save_session
 
 logger = logging.getLogger("plg.cloud")
+
+_SESSION_SKEW_S = 90
+_device_registered = False
 
 
 def is_cloud_mode() -> bool:
@@ -24,12 +28,59 @@ def cloud_api_url() -> str:
     return (os.getenv("PLG_CLOUD_URL") or "http://127.0.0.1:8787").rstrip("/")
 
 
+def _format_cloud_http_error(exc: Exception, *, path: str = "") -> dict[str, Any]:
+    """Turn httpx/network failures into actionable UI messages."""
+    url = cloud_api_url()
+    target = f"{url}{path}" if path else url
+    text = str(exc).strip() or exc.__class__.__name__
+    lower = text.lower()
+
+    if "getaddrinfo failed" in lower or "name or service not known" in lower:
+        hint = (
+            f"Cannot reach PLG Cloud at {url} (DNS lookup failed).\n\n"
+            "For local dev:\n"
+            "1. Terminal: python cloud\\run.py\n"
+            "2. In .env set PLG_CLOUD_URL=http://127.0.0.1:8787\n"
+            "3. Restart PLG\n\n"
+            "For release: deploy the cloud API first, then point PLG_CLOUD_URL "
+            "to your live host (e.g. https://api.plugflp.tech)."
+        )
+        return {"ok": False, "error": hint, "error_type": "cloud"}
+
+    if "connection refused" in lower or "actively refused" in lower:
+        return {
+            "ok": False,
+            "error": (
+                f"PLG Cloud is not running at {url}.\n\n"
+                "Start it: python cloud\\run.py\n"
+                "Then click Create beat again."
+            ),
+            "error_type": "cloud",
+        }
+
+    if "timed out" in lower or "timeout" in lower:
+        return {
+            "ok": False,
+            "error": (
+                "PLG Cloud did not respond in time.\n\n"
+                f"Server: {target}\n\n"
+                "Gemini can take 1–3 minutes when busy. Keep cloud\\run.py open "
+                "and try again."
+            ),
+            "error_type": "cloud",
+        }
+
+    return {"ok": False, "error": f"Cloud request failed ({target}): {text}", "error_type": "cloud"}
+
+
 def supabase_url() -> str:
     return (os.getenv("SUPABASE_URL") or "").rstrip("/")
 
 
 def supabase_anon_key() -> str:
-    return (os.getenv("SUPABASE_ANON_KEY") or "").strip()
+    return (
+        os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_PUBLISHABLE_KEY") or ""
+    ).strip()
 
 
 def _auth_headers() -> dict[str, str]:
@@ -60,15 +111,78 @@ def _supabase_headers() -> dict[str, str]:
 
 
 def _store_auth_response(data: dict[str, Any]) -> dict[str, Any]:
+    expires_in = data.get("expires_in")
+    expires_at: float | None = None
+    if expires_in is not None:
+        try:
+            expires_at = time.time() + float(expires_in)
+        except (TypeError, ValueError):
+            expires_at = None
     session = {
         "access_token": data.get("access_token"),
         "refresh_token": data.get("refresh_token"),
         "expires_in": data.get("expires_in"),
+        "expires_at": expires_at,
         "user": data.get("user"),
         "email": (data.get("user") or {}).get("email"),
     }
     save_session(session)
     return session
+
+
+def _needs_refresh(session: dict[str, Any]) -> bool:
+    token = str(session.get("access_token") or "").strip()
+    refresh = str(session.get("refresh_token") or "").strip()
+    if not token:
+        return bool(refresh)
+    expires_at = session.get("expires_at")
+    if expires_at is None:
+        return False
+    try:
+        return time.time() >= float(expires_at) - _SESSION_SKEW_S
+    except (TypeError, ValueError):
+        return False
+
+
+def ensure_session(*, validate: bool = False) -> dict[str, Any]:
+    """Restore session from disk; refresh expired tokens; optionally validate with /v1/me."""
+    global _device_registered
+
+    session = load_session()
+    if not session.get("access_token") and not session.get("refresh_token"):
+        return {"ok": True, "signed_in": False}
+
+    did_refresh = False
+    if _needs_refresh(session):
+        refreshed = refresh_session()
+        did_refresh = bool(refreshed.get("ok"))
+        if not did_refresh:
+            return {"ok": True, "signed_in": False}
+        session = load_session()
+
+    token = str(session.get("access_token") or "").strip()
+    if not token:
+        return {"ok": True, "signed_in": False}
+
+    if not validate:
+        return {"ok": True, "signed_in": True}
+
+    me = fetch_me()
+    if me.get("ok"):
+        if did_refresh or not _device_registered:
+            reg = register_device()
+            if reg.get("ok"):
+                _device_registered = True
+            else:
+                logger.warning("device register on session restore: %s", reg.get("error"))
+        return {"ok": True, "signed_in": True}
+
+    if me.get("error_type") == "auth":
+        clear_session()
+        _device_registered = False
+        return {"ok": True, "signed_in": False}
+
+    return {"ok": True, "signed_in": True}
 
 
 def signup(
@@ -114,6 +228,15 @@ def signup(
                 }
             )
             register_device()
+        else:
+            login_result = login(email, password)
+            if not login_result.get("ok"):
+                return {
+                    "ok": True,
+                    "message": data.get("message", "Account created."),
+                    "session": session,
+                    "needs_login": True,
+                }
         return {"ok": True, "message": data.get("message", "Account created."), "session": load_session()}
 
 
@@ -131,7 +254,10 @@ def login(email: str, password: str) -> dict[str, Any]:
         if resp.status_code >= 400:
             return {"ok": False, "error": _parse_error(resp), "error_type": "auth"}
         _store_auth_response(resp.json())
+        global _device_registered
+        _device_registered = False
         register_device()
+        _device_registered = True
         return {"ok": True, "session": load_session()}
 
 
@@ -152,6 +278,7 @@ def request_password_reset(email: str) -> dict[str, Any]:
 
 
 def refresh_session() -> dict[str, Any]:
+    global _device_registered
     session = load_session()
     refresh = str(session.get("refresh_token") or "").strip()
     base = supabase_url()
@@ -166,23 +293,31 @@ def refresh_session() -> dict[str, Any]:
         )
         if resp.status_code >= 400:
             clear_session()
+            _device_registered = False
             return {"ok": False, "error": "Session expired. Sign in again.", "error_type": "auth"}
         _store_auth_response(resp.json())
         return {"ok": True, "session": load_session()}
 
 
 def logout() -> dict[str, Any]:
+    global _device_registered
     try:
         with httpx.Client(timeout=15.0) as client:
             client.post(f"{cloud_api_url()}/v1/auth/logout", headers=_api_headers())
     except Exception:  # noqa: BLE001
         pass
     clear_session()
+    _device_registered = False
     return {"ok": True}
 
 
 def is_signed_in() -> bool:
-    return bool(load_session().get("access_token"))
+    session = load_session()
+    if not session.get("access_token"):
+        return False
+    if _needs_refresh(session):
+        return bool(ensure_session().get("signed_in"))
+    return True
 
 
 def session_snapshot() -> dict[str, Any]:
@@ -211,9 +346,13 @@ def register_device() -> dict[str, Any]:
                 headers=_api_headers(),
                 json={"device_id": get_device_id(), "device_name": get_device_name()},
             )
-        data = resp.json()
+        try:
+            data = resp.json() if resp.content else {}
+        except Exception:  # noqa: BLE001
+            data = {}
         if resp.status_code >= 400:
-            return {"ok": False, "error": data.get("detail") or resp.text, "error_type": "device"}
+            detail = data.get("detail") if isinstance(data.get("detail"), str) else resp.text
+            return {"ok": False, "error": detail or f"HTTP {resp.status_code}", "error_type": "device"}
         return {"ok": True, **data}
 
 
@@ -290,31 +429,39 @@ def cloud_generate(
     if locale:
         payload["locale"] = locale
 
-    with httpx.Client(timeout=120.0) as client:
-        resp = client.post(
-            f"{cloud_api_url()}/v1/generate",
-            headers=_api_headers(),
-            json=payload,
-        )
-        if resp.status_code == 401:
-            refreshed = refresh_session()
-            if not refreshed.get("ok"):
-                return refreshed
+    try:
+        with httpx.Client(timeout=180.0) as client:
             resp = client.post(
                 f"{cloud_api_url()}/v1/generate",
                 headers=_api_headers(),
                 json=payload,
             )
-        data = resp.json()
-        if resp.status_code >= 400:
-            detail = data.get("detail") if isinstance(data.get("detail"), str) else data.get("detail")
-            if isinstance(detail, list):
-                detail = detail[0].get("msg") if detail else resp.text
-            err_type = "quota" if resp.status_code == 429 else "cloud"
-            if resp.status_code == 402:
-                err_type = "subscription"
-            return {"ok": False, "error": detail or resp.text, "error_type": err_type, "quota": data.get("quota")}
-        return {"ok": True, **data}
+            if resp.status_code == 401:
+                refreshed = refresh_session()
+                if not refreshed.get("ok"):
+                    return refreshed
+                resp = client.post(
+                    f"{cloud_api_url()}/v1/generate",
+                    headers=_api_headers(),
+                    json=payload,
+                )
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        logger.exception("cloud_generate request failed")
+        return _format_cloud_http_error(exc, path="/v1/generate")
+    except OSError as exc:
+        logger.exception("cloud_generate network failed")
+        return _format_cloud_http_error(exc, path="/v1/generate")
+
+    if resp.status_code >= 400:
+        detail = data.get("detail") if isinstance(data.get("detail"), str) else data.get("detail")
+        if isinstance(detail, list):
+            detail = detail[0].get("msg") if detail else resp.text
+        err_type = "quota" if resp.status_code == 429 else "cloud"
+        if resp.status_code == 402:
+            err_type = "subscription"
+        return {"ok": False, "error": detail or resp.text, "error_type": err_type, "quota": data.get("quota")}
+    return {"ok": True, **data}
 
 
 def fetch_feature_flags() -> dict[str, Any]:
@@ -345,6 +492,7 @@ def fetch_auth_config() -> dict[str, Any]:
 
 
 def delete_account() -> dict[str, Any]:
+    global _device_registered
     with httpx.Client(timeout=30.0) as client:
         resp = client.delete(f"{cloud_api_url()}/v1/account", headers=_api_headers())
         if resp.status_code == 401:
@@ -357,6 +505,7 @@ def delete_account() -> dict[str, Any]:
             detail = data.get("detail") if isinstance(data.get("detail"), str) else resp.text
             return {"ok": False, "error": detail, "error_type": "account"}
     clear_session()
+    _device_registered = False
     return {"ok": True, "message": data.get("message", "Account deleted.")}
 
 
