@@ -209,7 +209,7 @@ def pick_bundled_for_track(
 
     text = f"{prompt} {style}".lower()
     keywords = {
-        "opium": ("opium", "rage", "ken", "carson", "f1lthy"),
+        "opium": ("opium", "rage", "dark", "distort"),
         "heavy": ("heavy", "distort", "rage", "phonk"),
         "clean": ("clean", "star", "melodic", "ambient"),
         "click": ("click", "punch", "trap"),

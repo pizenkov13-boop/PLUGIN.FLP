@@ -3,7 +3,7 @@
 LLMs reliably write only a few bars, so PLG generates a strong CORE and then
 deterministically develops it across a real arrangement: Intro / Verse /
 Chorus(drop) / Outro. Each section gates which tracks play, so the song breathes
-(intro = melody only, verse adds drums+808, chorus = full F1LTHY wall, outro
+(intro = melody only, verse adds drums+808, chorus = full wall, outro
 winds down). Each track tiles by its own loop length, so a 1-bar drum loop
 repeats every bar while a 4-bar melody repeats every 4 bars.
 

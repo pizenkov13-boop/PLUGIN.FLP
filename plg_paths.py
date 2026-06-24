@@ -47,7 +47,7 @@ def starter_bundle_dir() -> Path:
 
 
 def bundled_sounds_dir() -> Path:
-    """Opium / F1LTHY-style one-shot pool shipped with the app."""
+    """Dark / rage-style one-shot pool shipped with the app."""
     return starter_bundle_dir() / "bundled_sounds"
 
 

@@ -28,9 +28,9 @@ STRUCTURE
 
 GENRE FORKS (match prompt — never echo artist or label names in output):
 - dark trap / rage: rules above, BPM 140–170, fx_automation distortion on 808.
-- travis/metro atmospheric trap: half-time feel, sparse drums, long 808, triplet hat rolls.
+- atmospheric trap: half-time feel, sparse drums, long 808, triplet hat rolls.
 - phonk/drift: 150–165 BPM, cowbell melody, crushed master, phonk vocals OK in library_refs.
-- pop dance (dua/weeknd): four-on-floor kick 115–124, sidechain feel, brighter but still minor.
+- dance pop / dark synth-pop: four-on-floor kick 115–124, sidechain feel, brighter but still minor.
 - country: 80–110 BPM MAJOR, shuffle hats, acoustic/banjo melody — NO 808 sub.
 - ambient: 60–80 BPM, minimal/no drums, long reverb tails.
 - NEVER grindcore unless prompt explicitly asks.

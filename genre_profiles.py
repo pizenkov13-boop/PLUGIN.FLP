@@ -1,13 +1,13 @@
 """Genre router — per-genre humanize profiles.
 
 One deterministic profile per genre drives the producer brain so the same
-engine does justice to country, opium, rage, phonk, drill, hyperpop, jersey,
+engine does justice to country, rage, phonk, drill, hyperpop, jersey,
 k-pop, R&B, pop and (only on request) grind / anti-music — instead of forcing
 trap micro-timing onto everything. Each profile only flips knobs the humanize
 layer actually controls; the LLM still writes the notes.
 
 The "trap" default reproduces the engine's original behaviour exactly, so the
-opium/rage path and its tests are unchanged.
+rage path and its tests are unchanged.
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ DEFAULT = GenreProfile("trap", None)
 
 PROFILES: dict[str, GenreProfile] = {
     "trap": DEFAULT,
-    "opium": GenreProfile(
-        "opium", "phrygian", drop_tension=True, humanize_drum_velocity=False,
+    "rage": GenreProfile(
+        "rage", "phrygian", drop_tension=True, humanize_drum_velocity=False,
         soft_clip=True, filth=0.9, melody_lag_ms=12.0, voicing_spread=0.15,
         kick_syncopation=0.35, markov_hats=True,
     ),
@@ -83,24 +83,24 @@ PROFILES: dict[str, GenreProfile] = {
         "grind", "locrian", eight08=False, eight08_slides=False, hat_rolls=False,
         hat_swing=0.0, counter_melody=False, stereo_drop=False, soft_clip=True, filth=1.0,
     ),
-    # The Weeknd — dark synth-pop: Minor 9th colour (wide voicings), smooth
-    # behind-the-beat pocket, no trap rolls, gentle.
-    "weeknd": GenreProfile(
-        "weeknd", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.4,
+    # Dark synth-pop — Minor 9th colour (wide voicings), smooth behind-the-beat
+    # pocket, no trap rolls, gentle.
+    "dark_pop": GenreProfile(
+        "dark_pop", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.4,
         humanize_drum_velocity=True, soft_clip=False, filth=0.2,
         melody_lag_ms=14.0, voicing_spread=0.22,
     ),
-    # Dua Lipa — nu-disco/dance-pop: straight 120 grid, off-beat hats, funky
-    # syncopated bass, wide bright chords, no rolls.
-    "dualipa": GenreProfile(
-        "dualipa", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.2,
+    # Disco-pop / nu-disco — straight grid, off-beat hats, funky syncopated bass,
+    # wide bright chords, no rolls.
+    "disco_pop": GenreProfile(
+        "disco_pop", "dorian", eight08_slides=False, hat_rolls=False, hat_swing=0.2,
         humanize_drum_velocity=True, soft_clip=False, filth=0.2,
         kick_syncopation=0.45, voicing_spread=0.2,
     ),
-    # Martin Garrix — festival/big-room EDM: minor, layered leads, and an
-    # accelerating snare riser (1/4→1/32) with pitch-up before each drop.
-    "garrix": GenreProfile(
-        "garrix", "natural_minor", eight08=False, eight08_slides=False, hat_rolls=False,
+    # Festival / big-room EDM — minor, layered leads, and an accelerating snare
+    # riser (1/4→1/32) with pitch-up before each drop.
+    "edm": GenreProfile(
+        "edm", "natural_minor", eight08=False, eight08_slides=False, hat_rolls=False,
         hat_swing=0.3, drop_tension=True, soft_clip=True, filth=0.5,
         voicing_spread=0.2, snare_riser=True, markov_hats=True,
     ),
@@ -108,23 +108,24 @@ PROFILES: dict[str, GenreProfile] = {
 
 # Detection keywords (EN + RU). Checked in PRIORITY order so e.g. "k-pop" and
 # "hyperpop" win over a bare "pop" substring.
+# Generic genre / style descriptors only — no artist, producer or label names.
 GENRE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "grind": ("grindcore", "grind core", "anti-music", "anti music", "антимузык", "гриндкор", "blastbeat", "blast beat"),
-    "opium": ("opium", "rage", "f1lthy", "filthy", "ken carson", "carson", "destroy lonely", "playboi", "carti", "pluggnb", "plugg", "sexyy", "sigma", "jerk"),
-    "phonk": ("phonk", "memphis", "cowbell", "фонк", "дрифт"),
+    "rage": ("rage", "дарк трэп", "dark trap", "underground trap", "pluggnb", "plugg", "jerk", "sigma", "хорор", "horror trap"),
+    "phonk": ("phonk", "memphis", "cowbell", "фонк", "дрифт", "drift"),
     "drill": ("drill", "дрилл", "uk drill", "ny drill"),
     "hyperpop": ("hyperpop", "hyper pop", "гиперпоп", "glitchcore", "glitch core"),
     "jersey": ("jersey", "jersey club", "джерси", "bed squeak"),
     "kpop": ("kpop", "k-pop", "к-поп", "кпоп", "idol pop"),
     "rnb": ("rnb", "r&b", "rhythm and blues", "neo soul", "neo-soul", "neosoul", "эрэнби"),
-    "garrix": ("garrix", "martin garrix", "edm", "big room", "bigroom", "festival", "future bounce", "progressive house"),
-    "dualipa": ("dua lipa", "dua", "nu-disco", "nu disco", "disco pop", "dance pop"),
-    "weeknd": ("weeknd", "the weeknd", "abel", "dark pop", "synthwave pop", "80s pop"),
+    "edm": ("edm", "big room", "bigroom", "festival", "future bounce", "progressive house", "main stage"),
+    "disco_pop": ("nu-disco", "nu disco", "disco pop", "dance pop", "disco", "диско"),
+    "dark_pop": ("dark pop", "synthwave pop", "synthwave", "80s pop", "alt pop", "synth-pop"),
     "pop": ("pop", "поп", "synthpop", "synth pop"),
 }
 PRIORITY = (
-    "grind", "opium", "phonk", "drill", "hyperpop", "jersey", "kpop", "rnb",
-    "garrix", "dualipa", "weeknd", "pop",
+    "grind", "rage", "phonk", "drill", "hyperpop", "jersey", "kpop", "rnb",
+    "edm", "disco_pop", "dark_pop", "pop",
 )
 
 

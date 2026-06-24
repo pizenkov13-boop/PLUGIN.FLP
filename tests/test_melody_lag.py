@@ -51,5 +51,5 @@ def test_voicing_spread_zero_is_noop():
 def test_profiles_lag_wiring():
     # trap default invariant preserved (no lag); opium gets the lazy pocket.
     assert PROFILES["trap"].melody_lag_ms == 0.0
-    assert profile_for(prompt="opium rage carti").melody_lag_ms == 12.0
-    assert profile_for(prompt="opium").voicing_spread == 0.15
+    assert profile_for(prompt="rage dark trap").melody_lag_ms == 12.0
+    assert profile_for(prompt="rage").voicing_spread == 0.15

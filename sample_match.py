@@ -113,7 +113,7 @@ def partner_kick_keywords(eight08_name: str) -> tuple[str, ...]:
         return _FAT_KICK
     if any(h in name for h in _LONG_808_HINTS):
         return _PUNCHY_KICK
-    return _PUNCHY_KICK  # opium default: long distorted 808 → tight click kick
+    return _PUNCHY_KICK  # dark default: long distorted 808 → tight click kick
 
 
 def score_candidate(

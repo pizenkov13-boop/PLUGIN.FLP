@@ -60,16 +60,16 @@ def test_snare_riser_accelerates_before_drop():
 # --- New presets ------------------------------------------------------------
 
 def test_new_presets_detected():
-    assert detect_genre(prompt="martin garrix festival edm") == "garrix"
-    assert detect_genre(prompt="dua lipa nu-disco") == "dualipa"
-    assert detect_genre(prompt="the weeknd dark pop") == "weeknd"
+    assert detect_genre(prompt="festival edm big room") == "edm"
+    assert detect_genre(prompt="nu-disco dance pop") == "disco_pop"
+    assert detect_genre(prompt="dark synth-pop") == "dark_pop"
 
 
 def test_new_preset_knobs():
-    assert profile_for(prompt="garrix big room").snare_riser is True
-    assert profile_for(prompt="weeknd").melody_scale == "dorian"
-    assert profile_for(prompt="weeknd").voicing_spread > 0
-    assert profile_for(prompt="dua lipa").kick_syncopation > 0
+    assert profile_for(prompt="festival edm").snare_riser is True
+    assert profile_for(prompt="dark pop").melody_scale == "dorian"
+    assert profile_for(prompt="dark pop").voicing_spread > 0
+    assert profile_for(prompt="nu-disco").kick_syncopation > 0
 
 
 # --- Mastering math in the guide -------------------------------------------
@@ -88,4 +88,4 @@ def test_mix_blueprint_has_mastering_numbers():
 def test_genre_profiles_json_present_and_loaded():
     path = Path(__file__).resolve().parents[1] / "assets" / "genre_profiles.json"
     assert path.is_file()
-    assert "opium" in PROFILES and PROFILES["opium"].markov_hats is True
+    assert "rage" in PROFILES and PROFILES["rage"].markov_hats is True

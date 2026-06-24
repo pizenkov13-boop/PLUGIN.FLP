@@ -168,7 +168,7 @@ def bake_session(pattern: dict[str, Any] | None = None) -> dict[str, Any]:
 
 
 def set_filth_mode(enabled: bool, pattern: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Toggle Opium filth mix preset (metadata + blueprint — configure plugins in FL)."""
+    """Toggle the heavy distortion mix preset (metadata + blueprint — configure plugins in FL)."""
     data = deepcopy(pattern or load_pattern())
     meta = data.setdefault("plg_producer_meta", {})
     if not isinstance(meta, dict):

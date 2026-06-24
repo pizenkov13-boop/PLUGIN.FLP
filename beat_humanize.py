@@ -1,4 +1,4 @@
-"""F1LTHY / Opium producer brain — deterministic MIDI humanization after the LLM."""
+"""Underground / rage producer brain — deterministic MIDI humanization after the LLM."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
 logger = logging.getLogger("plg.humanize")
 
 BEATS_PER_BAR = 4.0
-PPQ_SWING_MIN = 6 / 96.0   # dirtier F1LTHY swing — +6..+9 ticks @ PPQ 96
+PPQ_SWING_MIN = 6 / 96.0   # dirtier swing — +6..+9 ticks @ PPQ 96
 PPQ_SWING_MAX = 9 / 96.0
 PHASE_DELAY_BEATS = 0.008
 DROP_GAP_START = 3.5
@@ -590,11 +590,11 @@ def build_sidechain_hints(kick_notes: list[dict[str, Any]]) -> list[dict[str, An
 def _style_flags(pattern: dict[str, Any]) -> dict[str, bool]:
     text = f"{pattern.get('style', '')} {pattern.get('user_prompt', '')}".lower()
     return {
-        "opium": any(k in text for k in ("opium", "f1lthy", "ken", "carson", "rage", "destroy", "lonely")),
+        "rage": any(k in text for k in ("rage", "dark trap", "underground", "plugg", "jerk")),
         "country": any(k in text for k in ("country", "кантри", "banjo", "банджо")),
         "phonk": any(k in text for k in ("phonk", "drift", "memphis", "cowbell")),
         "ambient": any(k in text for k in ("ambient", "chill", "sleep", "эмбиент")),
-        "pop_dance": any(k in text for k in ("dua", "weeknd", "dance pop", "nu-disco")),
+        "pop_dance": any(k in text for k in ("dance pop", "nu-disco", "disco", "dark pop")),
     }
 
 
@@ -999,5 +999,5 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
     steps.append(f"Genre profile: {profile.name}" + (" · FILTH MAX" if filth else "") + ".")
     data["manual_steps"] = steps[:15]
 
-    logger.info("Producer brain applied (opium=%s)", flags["opium"])
+    logger.info("Producer brain applied (rage=%s)", flags["rage"])
     return data

@@ -36,7 +36,7 @@ def _match_phrases(text: str, phrases: list[str]) -> bool:
 
 
 def detect_tags(prompt: str, locale: str | None = None) -> list[str]:
-    """Return system tags (OPIUM, RAGE, …) found in prompt across all languages."""
+    """Return system tags (RAGE, PHONK, …) found in prompt across all languages."""
     data = _load_tags()
     text = _normalize_text(prompt)
     found: list[str] = []

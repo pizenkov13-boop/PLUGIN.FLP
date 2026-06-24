@@ -19,8 +19,8 @@
       "markov_hats": false,
       "snare_riser": false
     },
-    "opium": {
-      "name": "opium",
+    "rage": {
+      "name": "rage",
       "melody_scale": "phrygian",
       "eight08": true,
       "eight08_slides": true,
@@ -190,8 +190,8 @@
       "markov_hats": false,
       "snare_riser": false
     },
-    "weeknd": {
-      "name": "weeknd",
+    "dark_pop": {
+      "name": "dark_pop",
       "melody_scale": "dorian",
       "eight08": true,
       "eight08_slides": false,
@@ -209,8 +209,8 @@
       "markov_hats": false,
       "snare_riser": false
     },
-    "dualipa": {
-      "name": "dualipa",
+    "disco_pop": {
+      "name": "disco_pop",
       "melody_scale": "dorian",
       "eight08": true,
       "eight08_slides": false,
@@ -228,8 +228,8 @@
       "markov_hats": false,
       "snare_riser": false
     },
-    "garrix": {
-      "name": "garrix",
+    "edm": {
+      "name": "edm",
       "melody_scale": "natural_minor",
       "eight08": false,
       "eight08_slides": false,

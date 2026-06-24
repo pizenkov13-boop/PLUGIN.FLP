@@ -113,7 +113,7 @@ def format_build_guide(data: dict[str, Any]) -> str:
     order = data.get("build_order") or list(DEFAULT_BUILD_ORDER)
     lines = [
         f"PLG | BPM {data.get('bpm', '?')} | {data.get('style', 'unknown')}",
-        "Producer mode: Don Toliver / Opium FL workflow",
+        "Producer mode: dark melodic trap FL workflow",
         "",
         "Build order:",
     ]

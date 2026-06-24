@@ -7,7 +7,7 @@ instead of a random file from the dump folder. Hints ride the existing
 ``bonus_keywords`` channel in sample_match, so they stack with Rule 16 pairing.
 
 Each family is track-aware: "glassy" only nudges the melody, "knock" only the
-drums, while broad vibes (dark, opium) apply everywhere. Pass ``track`` to
+drums, while broad vibes (dark, rage) apply everywhere. Pass ``track`` to
 ``descriptor_hints`` to get only the families relevant to that channel.
 """
 
@@ -69,10 +69,9 @@ DESCRIPTOR_FAMILIES: dict[str, tuple[tuple[str, ...], tuple[str, ...], tuple[str
         ("metal", "steel", "metallic", "industr"),
         ("melody_lead", "hi_hats"),
     ),
-    "trap_opium": (
-        ("opium", "rage", "carti", "ken", "carson", "destroy", "lonely", "f1lthy",
-         "pluggnb", "plugg", "playboi", "sexyy", "sigma"),
-        ("opium", "rage", "carti", "ken", "plugg"),
+    "rage": (
+        ("rage", "dark trap", "underground", "pluggnb", "plugg", "jerk", "sigma"),
+        ("rage", "dark", "distort", "plugg", "aggressive"),
         (),
     ),
     "phonk": (

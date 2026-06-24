@@ -17,26 +17,26 @@ def _style_bucket(data: dict[str, Any]) -> str:
     tags = data.get("plg_style_tags")
     if isinstance(tags, list):
         joined = " ".join(str(t) for t in tags).lower()
-        if "opium" in joined or "rage" in joined:
-            return "opium"
+        if "rage" in joined or "dark trap" in joined:
+            return "rage"
         if "phonk" in joined:
             return "phonk"
-        if "metro" in joined:
-            return "metro"
+        if "atmospheric" in joined:
+            return "atmospheric"
     text = f"{data.get('style', '')} {data.get('user_prompt', '')}".lower()
-    if any(k in text for k in ("opium", "f1lthy", "ken", "carson", "rage", "destroy", "lonely")):
-        return "opium"
+    if any(k in text for k in ("rage", "dark trap", "underground", "plugg", "jerk")):
+        return "rage"
     if any(k in text for k in ("phonk", "drift", "memphis", "cowbell")):
         return "phonk"
-    if any(k in text for k in ("travis", "metro", "atmospheric")):
-        return "metro"
+    if any(k in text for k in ("atmospheric", "ambient trap", "cinematic")):
+        return "atmospheric"
     if any(k in text for k in ("country", "кантри")):
         return "country"
     return "trap"
 
 
 def _bpm_line(bpm: float, bucket: str, locale: str) -> str:
-    if bucket == "opium":
+    if bucket == "rage":
         return blueprint_text(locale, "bpm_opium", bpm=f"{bpm:.0f}")
     if bucket == "phonk":
         return blueprint_text(locale, "bpm_phonk", bpm=f"{bpm:.0f}")
@@ -75,7 +75,7 @@ def _channel_block(data: dict[str, Any], bucket: str, locale: str) -> list[str]:
     ])
 
     bass_name = picks.get("sub_808", "808")
-    if bucket == "opium":
+    if bucket == "rage":
         bass_fx = [
             f"808 / SUB ({bass_name})",
             f"  • {blueprint_text(locale, 'bass_opium')}",
@@ -100,7 +100,7 @@ def _channel_block(data: dict[str, Any], bucket: str, locale: str) -> list[str]:
         "",
     ])
 
-    if meta.get("master_soft_clip") or bucket in ("opium", "phonk"):
+    if meta.get("master_soft_clip") or bucket in ("rage", "phonk"):
         lines.extend([
             "MASTER",
             f"  • {blueprint_text(locale, 'master_opium')}",
@@ -180,7 +180,7 @@ def build_mix_blueprint(data: dict[str, Any], *, stem_folder: str | None = None)
     lines.extend(_channel_block(data, bucket, locale))
 
     meta = data.get("plg_producer_meta") if isinstance(data.get("plg_producer_meta"), dict) else {}
-    if bucket in ("opium", "phonk") or meta.get("master_soft_clip"):
+    if bucket in ("rage", "phonk") or meta.get("master_soft_clip"):
         lines.extend([
             f"─── {blueprint_text(locale, 'fx_recipe_header')} ───",
             f"  {blueprint_text(locale, 'fx_recipe_808')}",

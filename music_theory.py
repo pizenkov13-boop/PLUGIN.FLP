@@ -12,7 +12,7 @@ from typing import Any
 
 from pattern_utils import NOTE_NAMES, parse_note_name
 
-# Semitone offsets from the root. Opium/rage palette = natural minor + phrygian.
+# Semitone offsets from the root. Dark / rage palette = natural minor + phrygian.
 SCALES: dict[str, tuple[int, ...]] = {
     "natural_minor": (0, 2, 3, 5, 7, 8, 10),
     "phrygian": (0, 1, 3, 5, 7, 8, 10),

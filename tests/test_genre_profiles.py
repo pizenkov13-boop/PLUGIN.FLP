@@ -14,9 +14,9 @@ def test_kpop_detected_over_bare_pop():
     assert prof.hat_rolls is False
 
 
-def test_opium_profile_dark_and_clipped():
-    prof = profile_for("opium rage ken carson", "dark trap")
-    assert prof.name == "opium"
+def test_rage_profile_dark_and_clipped():
+    prof = profile_for("rage", "dark trap")
+    assert prof.name == "rage"
     assert prof.melody_scale == "phrygian"
     assert prof.drop_tension is True
     assert prof.soft_clip is True

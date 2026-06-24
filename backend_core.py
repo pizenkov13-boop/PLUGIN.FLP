@@ -253,9 +253,9 @@ def load_user_profile() -> dict[str, str]:
         "fl_version": "2025",
         "fl_edition": "producer",
         "os": "windows",
-        "producer_mode": "don_toliver",
-        "workflow": "opium melodic trap",
-        "references": "don toliver, opium, travis scott",
+        "producer_mode": "modern_melodic",
+        "workflow": "dark melodic trap",
+        "references": "dark melodic trap, atmospheric, distorted 808",
     }
     if USER_PROFILE_FILE.exists():
         data = json.loads(USER_PROFILE_FILE.read_text(encoding="utf-8"))

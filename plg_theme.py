@@ -1,4 +1,4 @@
-"""PLG design system — Opium × Apple × studio. Tokens + ttk overrides + widgets."""
+"""PLG design system — dark × Apple × studio. Tokens + ttk overrides + widgets."""
 
 from __future__ import annotations
 

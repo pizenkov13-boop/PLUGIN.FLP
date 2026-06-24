@@ -1,4 +1,4 @@
-"""Hat Rolling Engine — inject 1/32–1/64 rolls before snare hits (Opium / Rage grid)."""
+"""Hat Rolling Engine — inject 1/32–1/64 rolls before snare hits (rage / dark-trap grid)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pattern_utils import track_notes
 BEATS_PER_BAR = 4.0
 ROLL_STEP_32 = 0.125  # 1/32 in PLG beat grid (1.0 = quarter)
 ROLL_STEP_64 = 0.0625
-DEFAULT_ROLL_DEPTH = 0.375  # deeper pre-snare burst — more panicked F1LTHY rolls
+DEFAULT_ROLL_DEPTH = 0.375  # deeper pre-snare burst — more panicked rolls
 HAT_NOTE = "C5"
 
 

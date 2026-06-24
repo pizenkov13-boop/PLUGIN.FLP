@@ -22,7 +22,7 @@ def _bar_count(pattern: dict[str, Any], *, default: int = 4) -> int:
     return max(default, int(max_step // 4) + 1)
 
 
-# Half-time F1LTHY/Opium feel: clap+snare land on beat 3, kick bounces.
+# Half-time rage feel: clap+snare land on beat 3, kick bounces.
 _KICK_HITS = ((0.0, 115), (0.75, 96), (2.5, 102), (3.5, 92))
 
 
