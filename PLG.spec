@@ -40,6 +40,7 @@ asset_files = [
         "Frame 2.svg",
         "prompt_tags.json",
         "mix_blueprint_i18n.json",
+        "genre_profiles.json",
     )
     if (root / "assets" / name).is_file()
 ]
