@@ -172,6 +172,12 @@ class Api:
     ) -> dict:
         return plg_api.cloud_submit_feedback(category, message, attach_log=attach_log)
 
+    def record_beat_rating(self, rating: int) -> dict:
+        return plg_api.record_beat_rating(rating)
+
+    def beat_reward_status(self) -> dict:
+        return plg_api.beat_reward_status()
+
     def check_for_updates(self) -> dict:
         return plg_api.check_for_updates()
 

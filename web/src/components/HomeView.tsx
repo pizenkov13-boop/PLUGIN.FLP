@@ -77,6 +77,7 @@ export default function HomeView({
                 busy={busy}
                 onOpenInFl={onOpenInFl}
                 onRegenerate={onRegenerate}
+                onRated={onRefresh}
               />
 
               <ProducerConsole

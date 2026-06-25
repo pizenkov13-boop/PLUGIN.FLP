@@ -148,16 +148,24 @@ export default function AuthView({ onAuthed }: Props) {
         </label>
 
         {mode === "signup" && inviteRequired && (
-          <label className="auth__field">
-            <span>Invite code</span>
-            <input
-              type="text"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
+          <>
+            <label className="auth__field">
+              <span>{t("auth.inviteCode")}</span>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <p className="auth__hint">
+              {t("auth.inviteHint")}{" "}
+              <a href="https://pluginflp.app/#beta" target="_blank" rel="noopener noreferrer">
+                {t("auth.waitlistLink")}
+              </a>
+            </p>
+          </>
         )}
 
         {mode === "signup" && (

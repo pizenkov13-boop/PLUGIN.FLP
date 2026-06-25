@@ -15,7 +15,7 @@
 - [x] **Оферта** + владение контентом + **удаление данных** (Phase 5 legal)
 - [x] **Ramp** 200→2k→20k→100k, не шлюз в один день (`cloud/infra/ramp-100k.md`)
 - [x] **Админка** + метрики cost/revenue (`/v1/admin/metrics`, `admin_ops.py`)
-- [ ] **Бета 50 человек** до платной рекламы (ручной гейт: invite-only / waitlist)
+- [ ] **Бета 50 человек** до платной рекламы — см. [`docs/BETA.md`](docs/BETA.md), `landing/`, `scripts/beta_invites.py`
 - [ ] Supabase миграции **002–006** применены на prod
 - [ ] `dist\.env` заполнен (`SUPABASE_*`, `PLG_CLOUD_URL`)
 - [ ] Resend + SPF/DKIM/DMARC (`cloud/ops/email-deliverability.md`)
@@ -63,8 +63,11 @@ READ_ME_IMBA.txt на языке UI (plg_locale в паттерне)
 
 ## Phase 8 (до публичного лонча)
 
-- [ ] Landing + 60s demo
-- [ ] Бета 50 с обратной связью
+- [x] Landing + waitlist form (`landing/`, `POST /v1/waitlist/join`)
+- [x] Beta invite generator (`scripts/beta_invites.py`, `PLG_INVITE_ONLY`)
+- [x] Auth UI: invite code + waitlist link
+- [ ] 60s demo video on landing
+- [ ] Бета 50 с обратной связью (ops)
 - [ ] Telegram/Discord community после беты
 
 ---

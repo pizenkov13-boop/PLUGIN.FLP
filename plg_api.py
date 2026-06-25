@@ -444,6 +444,16 @@ def _read_export_meta() -> dict[str, Any]:
     if not isinstance(stem_files, list):
         stem_files = []
     chop = _read_pattern_field("plg_sample_chop")
+    quality = _read_pattern_field("plg_quality")
+    if not isinstance(quality, dict):
+        quality = {}
+    reward_meta: dict[str, Any] = {}
+    try:
+        from beat_reward import model_status
+
+        reward_meta = model_status()
+    except ImportError:
+        reward_meta = {}
     return {
         "bpm": _read_pattern_field("bpm"),
         "style": _read_pattern_field("style"),
@@ -452,6 +462,12 @@ def _read_export_meta() -> dict[str, Any]:
         "mix_blueprint": str(blueprint) if blueprint.is_file() else None,
         "sample_chop": chop if isinstance(chop, dict) else None,
         "filth_mode": bool(_read_pattern_field("plg_filth_mode", False)),
+        "beat_id": _read_pattern_field("plg_beat_id"),
+        "beat_rating": _read_pattern_field("plg_rating"),
+        "quality_score": quality.get("score"),
+        "reward_learning": bool(reward_meta.get("enabled")),
+        "reward_model_ready": bool(reward_meta.get("model_ready")),
+        "reward_ratings": reward_meta.get("ratings"),
     }
 
 
@@ -548,6 +564,58 @@ def open_path(path: str) -> dict[str, Any]:
         return {"ok": True, "path": str(target)}
     except OSError as exc:
         return _err(str(exc), "os_error")
+
+
+# ---------------------------------------------------------------------------
+# Beat rating (local reward model)
+# ---------------------------------------------------------------------------
+def record_beat_rating(rating: int) -> dict[str, Any]:
+    """Store 👍/👎 for the current beat and retrain the reward ranker."""
+    from beat_reward import model_status, record_rating, reward_enabled
+
+    if not PATTERN_JSON.is_file():
+        return _err("No beat to rate yet.", "no_beat")
+    if not reward_enabled():
+        return _err("Beat reward learning is disabled (install scikit-learn).", "disabled")
+
+    try:
+        pattern = json.loads(PATTERN_JSON.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError) as exc:
+        return _err(f"Could not read beat: {exc}", "io")
+
+    if not isinstance(pattern, dict):
+        return _err("Invalid beat file.", "invalid")
+
+    try:
+        result = record_rating(pattern, int(rating))
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("record_beat_rating failed: %s", exc)
+        return _err(str(exc), "reward")
+
+    pattern["plg_rating"] = result["rating"]
+    try:
+        PATTERN_JSON.write_text(
+            json.dumps(pattern, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        return _err(f"Could not save rating: {exc}", "io")
+
+    status = model_status()
+    return {
+        "ok": True,
+        "rating": result["rating"],
+        "total_ratings": result["total_ratings"],
+        "model_trained": result["model_trained"],
+        "model_ready": status.get("model_ready"),
+        "beat_id": pattern.get("plg_beat_id"),
+    }
+
+
+def beat_reward_status() -> dict[str, Any]:
+    from beat_reward import model_status
+
+    return {"ok": True, **model_status()}
 
 
 # ---------------------------------------------------------------------------
@@ -1158,6 +1226,8 @@ __all__ = [
     "cloud_billing_checkout",
     "cloud_fetch_status",
     "cloud_submit_feedback",
+    "record_beat_rating",
+    "beat_reward_status",
     "set_ui_locale",
     "check_for_updates",
     "download_update",

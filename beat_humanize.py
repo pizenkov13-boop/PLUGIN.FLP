@@ -9,7 +9,7 @@ import random
 from copy import deepcopy
 from typing import Any
 
-from genre_profiles import profile_for
+from genre_profiles import GenreProfile, profile_for
 from music_theory import detect_root_pc, key_label, snap_pc_to_scale
 from pattern_utils import TRACK_KEYS, parse_note_name, track_notes
 
@@ -821,8 +821,11 @@ def build_snare_riser(
     return sorted(risers, key=_note_step)
 
 
-def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
-    """Apply producer-brain post-processing to LLM output."""
+def humanize_pattern(pattern: dict[str, Any], *, profile: GenreProfile | None = None) -> dict[str, Any]:
+    """Apply producer-brain post-processing to LLM output.
+
+    Pass ``profile`` to override genre detection (used by ``plg_tune`` offline).
+    """
     data = deepcopy(pattern)
     tracks = data.setdefault("tracks", {})
     if not isinstance(tracks, dict):
@@ -848,7 +851,7 @@ def humanize_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
         k in f"{style} {prompt}".lower()
         for k in ("filth", "filthy", "мясо", "max filth", "брутал")
     )
-    profile = profile_for(style, prompt, filth_max=filth)
+    profile = profile if profile is not None else profile_for(style, prompt, filth_max=filth)
     logger.info("Producer brain: genre=%s filth=%s", profile.name, filth)
 
     # --- Hi-hats ---

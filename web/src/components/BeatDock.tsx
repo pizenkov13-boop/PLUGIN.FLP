@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { BeatResult, Status } from "../types";
-import { revealPath } from "../api";
+import { recordBeatRating, revealPath } from "../api";
 import { useI18n } from "../i18n";
 import { IconFl, IconFolder, IconRegenerate } from "./icons";
 import Waveform from "./Waveform";
@@ -11,6 +12,7 @@ type Props = {
   busy: boolean;
   onOpenInFl: () => void;
   onRegenerate?: () => void;
+  onRated?: () => void;
 };
 
 export default function BeatDock({
@@ -19,17 +21,44 @@ export default function BeatDock({
   busy,
   onOpenInFl,
   onRegenerate,
+  onRated,
 }: Props) {
   const { t } = useI18n();
+  const [ratingBusy, setRatingBusy] = useState(false);
+  const [rateMessage, setRateMessage] = useState<string | null>(null);
   const bpm = lastBeat?.bpm ?? status?.bpm;
   const style = lastBeat?.style ?? status?.style;
   const stemSession = lastBeat?.stem_session ?? status?.stem_session;
   const blueprint = lastBeat?.mix_blueprint ?? status?.mix_blueprint;
   const stemFiles = lastBeat?.stem_files?.length ? lastBeat.stem_files : status?.stem_files;
+  const beatId = lastBeat?.beat_id ?? status?.beat_id;
+  const beatRating = lastBeat?.beat_rating ?? status?.beat_rating;
+  const rewardLearning = status?.reward_learning ?? false;
+  const rewardRatings = status?.reward_ratings ?? 0;
+  const rated = beatRating === 1 || beatRating === -1;
 
   async function openPath(path: string | null | undefined) {
     if (!path) return;
     await revealPath(path);
+  }
+
+  async function handleRate(rating: number) {
+    if (rated || ratingBusy || busy) return;
+    setRatingBusy(true);
+    setRateMessage(null);
+    try {
+      const result = await recordBeatRating(rating);
+      if (result.ok) {
+        setRateMessage(t("session.rateThanks"));
+        onRated?.();
+      } else {
+        setRateMessage(result.error ?? t("session.rateFailed"));
+      }
+    } catch {
+      setRateMessage(t("session.rateFailed"));
+    } finally {
+      setRatingBusy(false);
+    }
   }
 
   return (
@@ -54,6 +83,38 @@ export default function BeatDock({
       <div className="beat-dock__monitor" aria-hidden>
         <Waveform bars={48} />
       </div>
+
+      {rewardLearning && beatId && (
+        <div className="beat-dock__rate" aria-label={t("session.rateBeat")}>
+          <span className="beat-dock__rate-label">{t("session.rateBeat")}</span>
+          <div className="beat-dock__rate-actions">
+            <button
+              type="button"
+              className={`beat-dock__rate-btn${beatRating === 1 ? " beat-dock__rate-btn--active" : ""}`}
+              onClick={() => handleRate(1)}
+              disabled={busy || ratingBusy || rated}
+              aria-pressed={beatRating === 1}
+              title={t("session.rateUp")}
+            >
+              👍
+            </button>
+            <button
+              type="button"
+              className={`beat-dock__rate-btn${beatRating === -1 ? " beat-dock__rate-btn--active" : ""}`}
+              onClick={() => handleRate(-1)}
+              disabled={busy || ratingBusy || rated}
+              aria-pressed={beatRating === -1}
+              title={t("session.rateDown")}
+            >
+              👎
+            </button>
+          </div>
+          {rateMessage && <p className="beat-dock__rate-msg">{rateMessage}</p>}
+          {!rateMessage && rewardRatings > 0 && (
+            <p className="beat-dock__rate-hint">{t("session.rateLearning", { count: rewardRatings })}</p>
+          )}
+        </div>
+      )}
 
       <div className="beat-dock__grid">
         <button

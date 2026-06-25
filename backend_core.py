@@ -326,6 +326,69 @@ def save_pattern(data: dict[str, Any], output_path: Path = OUTPUT_FILE) -> None:
     output_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _humanize_and_ingest(
+    pattern: dict[str, Any],
+    *,
+    library_root: Path,
+    user_prompt: str,
+    style: str,
+) -> dict[str, Any]:
+    from arranger import arrange_song
+    from beat_humanize import humanize_pattern
+    from drum_defaults import ensure_drum_tracks
+    from midi_ingest import ingest_library_midi
+    from reference_reverse import ingest_reference_audio
+
+    ensure_drum_tracks(pattern)
+    pattern["user_prompt"] = user_prompt
+    if not ingest_reference_audio(
+        pattern,
+        library_root=library_root,
+        prompt=user_prompt,
+        style=style,
+    ):
+        ingest_library_midi(
+            pattern,
+            library_root=library_root,
+            prompt=user_prompt,
+            style=style,
+        )
+    arrange_song(pattern)
+    return humanize_pattern(pattern)
+
+
+def _export_pattern_artifacts(
+    pattern: dict[str, Any],
+    *,
+    export_midi: bool,
+) -> None:
+    if export_midi:
+        from midi_export import export_stem_session
+        from midi_validate import log_validation_report, validate_export
+
+        midi_dir = PROJECT_DIR / "output_midi"
+        session = export_stem_session(pattern, midi_dir)
+        stem_dir = session["session_dir"]
+        combined = session["combined_path"]
+        logging.info(
+            "Stem Export Mixer: %s (%s stems + %s)",
+            session["session_name"],
+            len(session["stem_paths"]),
+            combined.name,
+        )
+        log_validation_report(validate_export(pattern, midi_dir=stem_dir, combined=combined))
+        pattern["plg_stem_session"] = str(stem_dir)
+        pattern["plg_stem_files"] = [str(p) for p in session["stem_paths"]]
+
+    from guide_export import export_build_guide
+    from mix_blueprint import export_mix_blueprint
+
+    export_build_guide(pattern)
+    stem_hint = pattern.get("plg_stem_session")
+    export_mix_blueprint(pattern, stem_folder=str(stem_hint) if stem_hint else None)
+    logging.info("Build guide -> build_guide.txt | Blueprint -> READ_ME_IMBA.txt")
+
+
 def run_pipeline(
     prompt: str,
     samples_dir: Path | None = None,
@@ -353,58 +416,70 @@ def run_pipeline(
     profile = load_user_profile()
     system_instruction = build_system_instruction(profile, catalog)
     logging.info("LLM provider: %s", provider_label())
-    pattern = generate_pattern(llm_prompt, system_instruction)
-    pattern = apply_prompt_metadata(pattern, prepared)
-    pattern["sample_library"] = catalog["root"]
 
-    from beat_humanize import humanize_pattern
-    from drum_defaults import ensure_drum_tracks
+    from beat_quality import (
+        attach_quality_meta,
+        evaluate,
+        max_retries,
+        min_score,
+        retry_prompt_suffix,
+        scorer_enabled,
+    )
     from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
 
-    ensure_drum_tracks(pattern)
-    pattern["user_prompt"] = prepared["user_prompt"]
+    retries = max_retries()
+    best_pattern: dict[str, Any] | None = None
+    best_score = -1.0
+    last_attempt = 0
 
-    from midi_ingest import ingest_library_midi
+    for attempt in range(retries + 1):
+        last_attempt = attempt
+        llm_input = llm_prompt if attempt == 0 else llm_prompt + retry_prompt_suffix(attempt)
+        if attempt > 0:
+            logging.info("Beat quality retry %s/%s", attempt, retries)
 
-    ingest_library_midi(
-        pattern,
-        library_root=resolved_samples,
-        prompt=prepared["user_prompt"],
-        style=str(pattern.get("style", "")),
-    )
-    from arranger import arrange_song
+        candidate = generate_pattern(llm_input, system_instruction)
+        candidate = apply_prompt_metadata(candidate, prepared)
+        candidate["sample_library"] = catalog["root"]
+        candidate = _humanize_and_ingest(
+            candidate,
+            library_root=resolved_samples,
+            user_prompt=prepared["user_prompt"],
+            style=str(candidate.get("style", "")),
+        )
+        report = evaluate(candidate)
+        if report.score > best_score:
+            best_score = report.score
+            best_pattern = candidate
+        if report.passed or not scorer_enabled():
+            best_pattern = candidate
+            break
+        if attempt < retries:
+            logging.warning(
+                "Beat below quality bar (score=%.1f < %.1f%s); regenerating…",
+                report.score,
+                min_score(),
+                ", hard fail" if report.hard_fail else "",
+            )
 
-    arrange_song(pattern)
-    pattern = humanize_pattern(pattern)
+    if best_pattern is None:
+        raise RuntimeError("Pipeline produced no pattern")
+
+    pattern = best_pattern
+    final_report = evaluate(pattern)
+    attach_quality_meta(pattern, final_report, attempt=last_attempt, retries_used=last_attempt)
+    if scorer_enabled():
+        logging.info(
+            "Beat quality: score=%.1f passed=%s (attempt %s)",
+            final_report.score,
+            final_report.passed,
+            last_attempt,
+        )
+
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
 
-    if export_midi:
-        from midi_export import export_stem_session
-        from midi_validate import log_validation_report, validate_export
-
-        midi_dir = PROJECT_DIR / "output_midi"
-        session = export_stem_session(pattern, midi_dir)
-        stem_dir = session["session_dir"]
-        combined = session["combined_path"]
-        logging.info(
-            "Stem Export Mixer: %s (%s stems + %s)",
-            session["session_name"],
-            len(session["stem_paths"]),
-            combined.name,
-        )
-        log_validation_report(validate_export(pattern, midi_dir=stem_dir, combined=combined))
-        pattern["plg_stem_session"] = str(stem_dir)
-        pattern["plg_stem_files"] = [str(p) for p in session["stem_paths"]]
-
-    from guide_export import export_build_guide
-    from mix_blueprint import export_mix_blueprint
-
-    export_build_guide(pattern)
-    stem_hint = pattern.get("plg_stem_session")
-    export_mix_blueprint(pattern, stem_folder=str(stem_hint) if stem_hint else None)
-    logging.info("Build guide -> build_guide.txt | Blueprint -> READ_ME_IMBA.txt")
-
+    _export_pattern_artifacts(pattern, export_midi=export_midi)
     save_pattern(pattern)
 
     return pattern
@@ -434,46 +509,26 @@ def run_pipeline_from_pattern(
         pattern.setdefault("plg_style_tags", prepared["plg_style_tags"])
     pattern["sample_library"] = catalog["root"]
 
-    from beat_humanize import humanize_pattern
-    from drum_defaults import ensure_drum_tracks
     from starter_kit import attach_sounds_to_pattern, ensure_starter_kit
 
-    ensure_drum_tracks(pattern)
-    pattern["user_prompt"] = prepared["user_prompt"]
-
-    from midi_ingest import ingest_library_midi
-
-    ingest_library_midi(
+    pattern = _humanize_and_ingest(
         pattern,
         library_root=resolved_samples,
-        prompt=prepared["user_prompt"],
+        user_prompt=prepared["user_prompt"],
         style=str(pattern.get("style", "")),
     )
-    from arranger import arrange_song
 
-    arrange_song(pattern)
-    pattern = humanize_pattern(pattern)
+    from beat_quality import attach_quality_meta, evaluate, scorer_enabled
+
+    if scorer_enabled():
+        report = evaluate(pattern)
+        attach_quality_meta(pattern, report, attempt=0, retries_used=0)
+        logging.info("Beat quality: score=%.1f passed=%s", report.score, report.passed)
+
     ensure_starter_kit()
     attach_sounds_to_pattern(pattern, catalog, library_root=resolved_samples, prompt=prepared["user_prompt"])
 
-    if export_midi:
-        from midi_export import export_stem_session
-        from midi_validate import log_validation_report, validate_export
-
-        midi_dir = PROJECT_DIR / "output_midi"
-        session = export_stem_session(pattern, midi_dir)
-        stem_dir = session["session_dir"]
-        combined = session["combined_path"]
-        log_validation_report(validate_export(pattern, midi_dir=stem_dir, combined=combined))
-        pattern["plg_stem_session"] = str(stem_dir)
-        pattern["plg_stem_files"] = [str(p) for p in session["stem_paths"]]
-
-    from guide_export import export_build_guide
-    from mix_blueprint import export_mix_blueprint
-
-    export_build_guide(pattern)
-    stem_hint = pattern.get("plg_stem_session")
-    export_mix_blueprint(pattern, stem_folder=str(stem_hint) if stem_hint else None)
+    _export_pattern_artifacts(pattern, export_midi=export_midi)
     save_pattern(pattern)
     return pattern
 

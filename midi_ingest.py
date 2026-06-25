@@ -112,6 +112,46 @@ def pick_library_midi(library_root: Path, prompt: str = "", style: str = "") -> 
     return None
 
 
+def merge_notes_into_pattern(
+    pattern: dict[str, Any],
+    notes: list[dict[str, Any]],
+    *,
+    source: str,
+    name: str,
+    meta_key: str = "plg_midi_ingest",
+    manual_prefix: str = "MIDI ingest",
+) -> bool:
+    """Write parsed notes into melody_lead / sub_808 and attach ingest metadata."""
+    if not notes:
+        return False
+
+    melody, bass = split_by_register(notes)
+    tracks = pattern.setdefault("tracks", {})
+    if not isinstance(tracks, dict):
+        return False
+
+    if melody:
+        tracks["melody_lead"] = melody
+    elif bass:
+        tracks["melody_lead"] = bass
+        bass = []
+    if bass and not track_notes(pattern, "sub_808"):
+        tracks["sub_808"] = bass
+
+    pattern[meta_key] = {
+        "source": source,
+        "name": name,
+        "notes": len(notes),
+        "melody_notes": len(melody),
+        "bass_notes": len(bass),
+    }
+    steps = list(pattern.get("manual_steps") or [])
+    steps.insert(0, f"{manual_prefix}: played {name} ({len(notes)} notes).")
+    pattern["manual_steps"] = steps[:16]
+    logger.info("%s: %s (%s notes)", manual_prefix, name, len(notes))
+    return True
+
+
 def ingest_library_midi(
     pattern: dict[str, Any],
     *,
@@ -127,31 +167,9 @@ def ingest_library_midi(
     if midi_path is None:
         return False
     notes = read_midi_notes(midi_path)
-    if not notes:
-        return False
-
-    melody, bass = split_by_register(notes)
-    tracks = pattern.setdefault("tracks", {})
-    if not isinstance(tracks, dict):
-        return False
-
-    if melody:
-        tracks["melody_lead"] = melody
-    elif bass:
-        tracks["melody_lead"] = bass  # bass-only midi → use it as the lead
-        bass = []
-    if bass and not track_notes(pattern, "sub_808"):
-        tracks["sub_808"] = bass
-
-    pattern["plg_midi_ingest"] = {
-        "source": str(midi_path),
-        "name": midi_path.name,
-        "notes": len(notes),
-        "melody_notes": len(melody),
-        "bass_notes": len(bass),
-    }
-    steps = list(pattern.get("manual_steps") or [])
-    steps.insert(0, f"MIDI ingest: played {midi_path.name} ({len(notes)} notes) from your library.")
-    pattern["manual_steps"] = steps[:16]
-    logger.info("MIDI ingest: %s (%s notes)", midi_path.name, len(notes))
-    return True
+    return merge_notes_into_pattern(
+        pattern,
+        notes,
+        source=str(midi_path),
+        name=midi_path.name,
+    )

@@ -1,4 +1,4 @@
-from genre_profiles import detect_genre, profile_for
+from genre_profiles import builtin_profile, detect_genre, profile_for
 
 
 def test_default_is_trap():
@@ -19,7 +19,9 @@ def test_rage_profile_dark_and_clipped():
     assert prof.name == "rage"
     assert prof.melody_scale == "phrygian"
     assert prof.drop_tension is True
-    assert prof.soft_clip is True
+    shipped = builtin_profile("rage")
+    assert shipped.soft_clip is True
+    assert shipped.filth == 0.9
 
 
 def test_rnb_is_dorian_and_soft():

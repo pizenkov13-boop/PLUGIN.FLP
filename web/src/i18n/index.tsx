@@ -45,6 +45,7 @@ const MESSAGES: Record<Locale, Messages> = Object.fromEntries(
           ...(pack.status as { phases?: Partial<Messages["status"]["phases"]> } | undefined)?.phases,
         },
       },
+      session: { ...en.session, ...pack.session },
       regenerate: { ...en.regenerate, ...pack.regenerate },
       flOnboard: { ...en.flOnboard, ...pack.flOnboard },
       updates: { ...en.updates, ...pack.updates },

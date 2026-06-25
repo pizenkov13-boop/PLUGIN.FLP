@@ -83,6 +83,12 @@ export const zh: LocalePack = {
     matchedKit: "匹配的 kit",
     openInFl: "在 FL Studio 中打开",
     newBeat: "新 beat",
+    rateBeat: "How's this beat?",
+    rateUp: "Good beat",
+    rateDown: "Not good",
+    rateThanks: "Saved — PLG learns from your taste.",
+    rateFailed: "Could not save rating.",
+    rateLearning: "Learning from {count} ratings",
   },
   library: {
     title: "库",

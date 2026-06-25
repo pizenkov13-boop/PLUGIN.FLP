@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="PLUGIN.FLP — prompt to beat to FL Studio. Private beta." />
+    <!-- Set to your cloud API origin, e.g. https://api.pluginflp.app -->
+    <meta name="plg-api" content="https://api.pluginflp.app" />
+    <title>PLUGIN.FLP — AI beat studio for FL</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site-header">
+        <div class="logo">PLUGIN.FLP</div>
+        <nav class="nav" aria-label="Primary">
+          <a href="#how">How it works</a>
+          <a href="#beta">Beta</a>
+          <a href="https://t.me/pluginflp_updates" rel="noopener">Updates</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Private beta · FL Studio</p>
+          <h1>Prompt → beat → open in FL.</h1>
+          <p>
+            Dark trap, rage, EDM — describe the vibe. PLG writes the pattern, matches samples,
+            and exports a session you mix in FL Studio.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="#beta">Join beta waitlist</a>
+            <a class="btn" href="#how">60s flow</a>
+          </div>
+        </div>
+        <aside class="demo-card" aria-label="Demo preview">
+          <h2>Your beat</h2>
+          <p>Generating · 42s · humanize</p>
+          <div class="wave" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p class="fine">AI drafts MIDI + kit match · you produce in FL</p>
+        </aside>
+      </section>
+
+      <section class="steps" id="how">
+        <article class="step">
+          <strong>1 · Prompt</strong>
+          <span>Any language — PLG normalizes tags for the server-side model.</span>
+        </article>
+        <article class="step">
+          <strong>2 · Generate</strong>
+          <span>Humanized drums, 808, melody, samples from your library.</span>
+        </article>
+        <article class="step">
+          <strong>3 · FL Studio</strong>
+          <span>One click opens PLG_Session.flp with mixer blueprint.</span>
+        </article>
+      </section>
+
+      <section class="waitlist" id="beta">
+        <div class="waitlist-grid">
+          <div>
+            <p class="eyebrow">Beta 50</p>
+            <h2>Invite-only access</h2>
+            <p class="fine">
+              We're onboarding producers in small waves. Join the waitlist — invite codes go out by
+              email. Already have a code? Sign up in the desktop app.
+            </p>
+            <p class="fine">899 ₽/mo CIS · trial beats included · FL 21+</p>
+          </div>
+          <form id="waitlist-form">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@studio.com" />
+            <button class="btn btn--primary" type="submit">Join waitlist</button>
+            <p id="waitlist-msg" class="waitlist-msg" role="status"></p>
+            <p class="fine">No spam. Unsubscribe anytime. 16+ only.</p>
+          </form>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <span>© PLUGIN.FLP</span>
+        <span>
+          <a href="mailto:support@pluginflp.app">Support</a>
+          ·
+          <a href="https://t.me/pluginflp_support">Telegram</a>
+        </span>
+      </footer>
+    </div>
+    <script src="waitlist.js"></script>
+  </body>
+</html>

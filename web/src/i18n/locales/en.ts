@@ -133,6 +133,12 @@ export const en: Messages = {
     matchedKit: "Matched kit",
     openInFl: "Open in FL Studio",
     newBeat: "New beat",
+    rateBeat: "How's this beat?",
+    rateUp: "Good beat",
+    rateDown: "Not good",
+    rateThanks: "Saved — PLG learns from your taste.",
+    rateFailed: "Could not save rating.",
+    rateLearning: "Learning from {count} ratings",
   },
   library: {
     title: "Library",
@@ -323,6 +329,9 @@ export const en: Messages = {
     confirmAge: "I am at least 16 years old",
     legalRequired: "Accept terms and confirm age to sign up.",
     aiDisclaimer: "Beats are AI-generated. You are responsible for releases and sample rights.",
+    inviteCode: "Invite code",
+    inviteHint: "No code yet?",
+    waitlistLink: "Join the waitlist at pluginflp.app",
   },
   prompts: {
     darkTrap: {

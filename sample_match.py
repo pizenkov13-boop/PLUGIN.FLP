@@ -1,4 +1,9 @@
-"""Pick the best library audio per track from prompt + style (not first file)."""
+"""Pick the best library audio per track from prompt + style (not first file).
+
+Name/folder scoring is the fast first pass. Top candidates are re-ranked by:
+  1) numpy spectral features (audio_features) when the prompt implies timbre
+  2) CLAP text↔audio similarity when laion-clap is installed (PLG_USE_CLAP=1 or auto)
+"""
 
 from __future__ import annotations
 
@@ -204,6 +209,8 @@ def pick_best_for_track(
     bonus_keywords: tuple[str, ...] = (),
     audio_target: dict[str, str] | None = None,
     audio_top_k: int = 6,
+    use_clap: bool | None = None,
+    clap_top_k: int = 8,
 ) -> tuple[Path | None, int]:
     prompt_tokens = _tokens(prompt)
     style_tokens = _tokens(style)
@@ -237,17 +244,41 @@ def pick_best_for_track(
     # Stable sort keeps the original candidate order on ties (legacy behaviour).
     order = sorted(range(len(scored)), key=lambda i: scored[i][0], reverse=True)
 
-    if audio_target:
-        # V2 "hearing": re-rank the top name matches by how they actually sound.
+    rerank_k = max(audio_top_k, clap_top_k) if use_clap is not False else audio_top_k
+    shortlist = [scored[i] for i in order[:rerank_k]]
+
+    clap_on = use_clap
+    if clap_on is None:
+        try:
+            import clap_match
+
+            clap_on = clap_match.use_clap() and bool((prompt or style).strip())
+        except ImportError:
+            clap_on = False
+
+    clap_bonuses: dict[str, int] = {}
+    if clap_on and shortlist:
+        import clap_match
+
+        text_emb = clap_match.get_text_embedding(prompt, style, track)
+        if text_emb is not None:
+            clap_bonuses = clap_match.score_paths([p for _, p in shortlist], text_emb)
+
+    if audio_target or clap_bonuses:
         import audio_features
 
         best_score = -10_000
         best_path: Path | None = None
-        for i in order[:audio_top_k]:
-            name_score, path = scored[i]
-            bonus = audio_features.feature_match_score(audio_features.analyze_cached(path), audio_target)
-            if name_score + bonus > best_score:
-                best_score = name_score + bonus
+        for name_score, path in shortlist:
+            total = name_score
+            if audio_target:
+                total += audio_features.feature_match_score(
+                    audio_features.analyze_cached(path),
+                    audio_target,
+                )
+            total += clap_bonuses.get(str(path.resolve()), 0)
+            if total > best_score:
+                best_score = total
                 best_path = path
     else:
         best_score, best_path = scored[order[0]]

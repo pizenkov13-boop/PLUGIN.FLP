@@ -106,6 +106,8 @@ PROFILES: dict[str, GenreProfile] = {
     ),
 }
 
+_BUILTIN_PROFILES: dict[str, GenreProfile] = {name: replace(p) for name, p in PROFILES.items()}
+
 # Detection keywords (EN + RU). Checked in PRIORITY order so e.g. "k-pop" and
 # "hyperpop" win over a bare "pop" substring.
 # Generic genre / style descriptors only — no artist, producer or label names.
@@ -167,6 +169,11 @@ def _apply_profile_overrides() -> None:
 
 
 _apply_profile_overrides()
+
+
+def builtin_profile(genre: str) -> GenreProfile:
+    """Shipped defaults (ignores JSON overlay) — used by offline tuner."""
+    return _BUILTIN_PROFILES.get(genre, DEFAULT)
 
 
 def profile_for(style: str = "", prompt: str = "", *, filth_max: bool = False) -> GenreProfile:

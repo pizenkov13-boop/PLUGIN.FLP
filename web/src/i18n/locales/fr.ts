@@ -83,6 +83,12 @@ export const fr: LocalePack = {
     matchedKit: "Kit correspondant",
     openInFl: "Ouvrir dans FL Studio",
     newBeat: "Nouveau beat",
+    rateBeat: "How's this beat?",
+    rateUp: "Good beat",
+    rateDown: "Not good",
+    rateThanks: "Saved — PLG learns from your taste.",
+    rateFailed: "Could not save rating.",
+    rateLearning: "Learning from {count} ratings",
   },
   library: {
     title: "Bibliothèque",

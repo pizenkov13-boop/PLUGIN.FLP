@@ -11,7 +11,7 @@ DEFAULT_LIBRARY_DIR = PROJECT_DIR / "PLG_Library"
 LEGACY_LIBRARY_DIR = PROJECT_DIR / "PLG_Sounds"
 
 # Audio — drum kits, samples, splice downloads
-AUDIO_FOLDERS = ("808", "hats", "kits", "textures", "melodies", "fx", "vocal_presets", "splice")
+AUDIO_FOLDERS = ("808", "hats", "kits", "textures", "melodies", "fx", "vocal_presets", "splice", "references")
 
 # Other Mafia categories
 MIDI_FOLDER = "midi"
@@ -44,6 +44,7 @@ MAFIA_CATEGORY_HINTS = {
     "fx": "samples / fx & transitions",
     "vocal_presets": "presets / vocal chains",
     "splice": "splice / one-shots & loops",
+    "references": "references / drop snippets to reverse into MIDI",
     "midi": "midi / melody & drum MIDI",
     "presets": "presets / synth & mixer presets",
     "projects": "projects / reference FL templates",

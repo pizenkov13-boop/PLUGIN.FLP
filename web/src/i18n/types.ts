@@ -138,6 +138,12 @@ export type Messages = {
     matchedKit: string;
     openInFl: string;
     newBeat: string;
+    rateBeat: string;
+    rateUp: string;
+    rateDown: string;
+    rateThanks: string;
+    rateFailed: string;
+    rateLearning: string;
   };
   library: {
     title: string;
@@ -310,6 +316,9 @@ export type Messages = {
     confirmAge: string;
     legalRequired: string;
     aiDisclaimer: string;
+    inviteCode: string;
+    inviteHint: string;
+    waitlistLink: string;
   };
   prompts: Record<string, PromptCard>;
 };

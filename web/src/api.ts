@@ -65,6 +65,8 @@ interface PywebviewApi {
   cloud_billing_checkout(priceTier?: string | null): Promise<ApiResult & { confirmation_url?: string; opened?: boolean }>;
   cloud_fetch_status(): Promise<CloudStatusResult>;
   cloud_submit_feedback(category: string, message: string, attachLog?: boolean): Promise<ApiResult & { message?: string }>;
+  record_beat_rating(rating: number): Promise<ApiResult & { rating?: number; model_ready?: boolean; total_ratings?: number }>;
+  beat_reward_status(): Promise<ApiResult & { enabled?: boolean; model_ready?: boolean; ratings?: number }>;
   check_for_updates(): Promise<ApiResult & { update_available?: boolean; latest?: string; current?: string; notes?: string }>;
   download_update(): Promise<ApiResult & { path?: string; version?: string }>;
   apply_downloaded_update(): Promise<ApiResult>;
@@ -176,6 +178,8 @@ export const cloudBillingCheckout = (priceTier?: string | null) =>
 export const cloudFetchStatus = () => api().cloud_fetch_status();
 export const cloudSubmitFeedback = (category: string, message: string, attachLog = false) =>
   api().cloud_submit_feedback(category, message, attachLog);
+export const recordBeatRating = (rating: number) => api().record_beat_rating(rating);
+export const beatRewardStatus = () => api().beat_reward_status();
 export const checkForUpdates = () => api().check_for_updates();
 export const downloadUpdate = () => api().download_update();
 export const applyDownloadedUpdate = () => api().apply_downloaded_update();

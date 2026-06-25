@@ -83,6 +83,12 @@ export const ja: LocalePack = {
     matchedKit: "マッチした kit",
     openInFl: "FL Studio で開く",
     newBeat: "新しいビート",
+    rateBeat: "How's this beat?",
+    rateUp: "Good beat",
+    rateDown: "Not good",
+    rateThanks: "Saved — PLG learns from your taste.",
+    rateFailed: "Could not save rating.",
+    rateLearning: "Learning from {count} ratings",
   },
   library: {
     title: "ライブラリ",

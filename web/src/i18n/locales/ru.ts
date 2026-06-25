@@ -133,6 +133,12 @@ export const ru: LocalePack = {
     matchedKit: "Подобранный кит",
     openInFl: "Открыть в FL Studio",
     newBeat: "Новый бит",
+    rateBeat: "Как бит?",
+    rateUp: "Зашло",
+    rateDown: "Не зашло",
+    rateThanks: "Сохранено — PLG учится на твоём вкусе.",
+    rateFailed: "Не удалось сохранить оценку.",
+    rateLearning: "Учится на {count} оценках",
   },
   library: {
     title: "Библиотека",
@@ -323,6 +329,9 @@ export const ru: LocalePack = {
     confirmAge: "Мне исполнилось 16 лет",
     legalRequired: "Примите условия и подтвердите возраст.",
     aiDisclaimer: "Биты генерируются с ИИ. Вы отвечаете за релизы и права на сэмплы.",
+    inviteCode: "Инвайт-код",
+    inviteHint: "Нет кода?",
+    waitlistLink: "Встать в waitlist на pluginflp.app",
   },
   prompts: {
     darkTrap: {

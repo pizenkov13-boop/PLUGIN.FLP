@@ -48,6 +48,12 @@ export interface Status {
   mix_blueprint?: string | null;
   sample_chop?: { chop_count?: number; pitch_semitones?: number; tempo_ratio?: number };
   filth_mode?: boolean;
+  beat_id?: string;
+  beat_rating?: number;
+  quality_score?: number;
+  reward_learning?: boolean;
+  reward_model_ready?: boolean;
+  reward_ratings?: number;
   quota: Quota;
 }
 
@@ -78,6 +84,9 @@ export interface BeatResult {
   stem_files?: string[];
   mix_blueprint?: string;
   filth_mode?: boolean;
+  beat_id?: string;
+  beat_rating?: number;
+  quality_score?: number;
   quota?: Quota;
 }
 
