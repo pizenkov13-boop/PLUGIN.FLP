@@ -414,7 +414,11 @@ def save_settings(updates: dict[str, Any]) -> dict[str, Any]:
 def get_quota() -> dict[str, Any]:
     """Beat quota snapshot plus the short label the status bar shows."""
     if _cloud_enabled() and plg_cloud.is_signed_in():
-        me = plg_cloud.fetch_me()
+        try:
+            me = plg_cloud.fetch_me()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cloud quota fetch failed, falling back to local snapshot: %s", exc)
+            me = {"ok": False}
         if me.get("ok") and isinstance(me.get("quota"), dict):
             snap = dict(me["quota"])
             snap["label"] = _format_cloud_quota_label(snap)
